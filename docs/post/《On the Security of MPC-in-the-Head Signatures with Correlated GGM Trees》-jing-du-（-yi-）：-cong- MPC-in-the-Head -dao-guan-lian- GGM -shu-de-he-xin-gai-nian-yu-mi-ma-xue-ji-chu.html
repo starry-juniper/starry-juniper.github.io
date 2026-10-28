@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html data-color-mode="light" data-dark-theme="dark" data-light-theme="light" lang="zh-CN">
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css' rel='stylesheet' />
+    
+    <link rel="icon" href="https://github.githubassets.com/favicons/favicon.svg"><script>
+        let theme = localStorage.getItem("meek_theme") || "light";
+        document.documentElement.setAttribute("data-color-mode", theme);
+    </script>
+<meta name="description" content="# 《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础
+
+> **论文**：*On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees*  
+> **作者**：Thibauld Feneuil、Matthieu Rivain  
+> **学习阶段**：第零轮（12 课基础概念学习）  
+> **笔记定位**：科研级精读前的知识地图，而非完整的形式化安全证明
+
+## 1. 为什么研究关联 GGM 树？
+
+MPC-in-the-Head（MPCitH，脑内多方计算）允许证明者在本地模拟多方计算，再通过承诺（commitment）与选择性开放（selective opening）证明自己知道满足公开约束的秘密见证，而不直接公开见证。">
+<meta property="og:title" content="《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础">
+<meta property="og:description" content="# 《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础
+
+> **论文**：*On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees*  
+> **作者**：Thibauld Feneuil、Matthieu Rivain  
+> **学习阶段**：第零轮（12 课基础概念学习）  
+> **笔记定位**：科研级精读前的知识地图，而非完整的形式化安全证明
+
+## 1. 为什么研究关联 GGM 树？
+
+MPC-in-the-Head（MPCitH，脑内多方计算）允许证明者在本地模拟多方计算，再通过承诺（commitment）与选择性开放（selective opening）证明自己知道满足公开约束的秘密见证，而不直接公开见证。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://starry-juniper.github.io/post/%E3%80%8AOn%20the%20Security%20of%20MPC-in-the-Head%20Signatures%20with%20Correlated%20GGM%20Trees%E3%80%8B-jing-du-%EF%BC%88-yi-%EF%BC%89%EF%BC%9A-cong-%20MPC-in-the-Head%20-dao-guan-lian-%20GGM%20-shu-de-he-xin-gai-nian-yu-mi-ma-xue-ji-chu.html">
+<meta property="og:image" content="https://github.githubassets.com/favicons/favicon.svg">
+<title>《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础</title>
+
+
+
+</head>
+<style>
+body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;padding: 45px;font-size: 16px;font-family: sans-serif;line-height: 1.25;}
+#header{display:flex;padding-bottom:8px;border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));margin-bottom: 16px;}
+#footer {margin-top:64px; text-align: center;font-size: small;}
+
+</style>
+
+<style>
+.postTitle{margin: auto 0;font-size:40px;font-weight:bold;}
+.title-right{display:flex;margin:auto 0 0 auto;}
+.title-right .circle{padding: 14px 16px;margin-right:8px;}
+#postBody{border-bottom: 1px solid var(--color-border-default);padding-bottom:36px;}
+#postBody hr{height:2px;}
+#cmButton{height:48px;margin-top:48px;}
+#comments{margin-top:64px;}
+.g-emoji{font-size:24px;}
+@media (max-width: 600px) {
+    body {padding: 8px;}
+    .postTitle{font-size:24px;}
+}
+
+</style>
+
+
+
+
+<body>
+    <div id="header">
+<h1 class="postTitle">《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础</h1>
+<div class="title-right">
+    <a href="https://starry-juniper.github.io" id="buttonHome" class="btn btn-invisible circle" title="首页">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathHome" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+    <a href="https://github.com/starry-juniper/starry-juniper.github.io/issues/2" target="_blank" class="btn btn-invisible circle" title="Issue">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathIssue" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="切换主题">
+        <svg class="octicon" width="16" height="16" >
+            <path id="themeSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
+</div>
+</div>
+    <div id="content">
+<div class="markdown-body" id="postBody"><h1>《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础</h1>
+<blockquote>
+<p><strong>论文</strong>：<em>On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees</em><br>
+<strong>作者</strong>：Thibauld Feneuil、Matthieu Rivain<br>
+<strong>学习阶段</strong>：第零轮（12 课基础概念学习）<br>
+<strong>笔记定位</strong>：科研级精读前的知识地图，而非完整的形式化安全证明</p>
+</blockquote>
+<h2>1. 为什么研究关联 GGM 树？</h2>
+<p>MPC-in-the-Head（MPCitH，脑内多方计算）允许证明者在本地模拟多方计算，再通过承诺（commitment）与选择性开放（selective opening）证明自己知道满足公开约束的秘密见证，而不直接公开见证。</p>
+<p>为了减小 MPCitH 签名的体积，研究者使用 <strong>GGM 种子树</strong>来压缩秘密分享的开放信息；在此基础上，<strong>Correlated GGM Trees（关联 GGM 树）</strong> 进一步引入 XOR 不变量来节省传输比特。</p>
+<p>然而，关联树中的节点与长期秘密见证存在代数联系。由此产生论文的核心问题：</p>
+<blockquote>
+<p><strong>优化签名长度所引入的额外结构，是否会削弱数字签名在选择消息攻击下的安全性？</strong></p>
+</blockquote>
+<p>论文提出相关攻击路径和安全条件（PGOW、RGOW），分别分析随机预言机模型与理想分组密码模型下的安全性，并将结论应用于 MQOM v2。</p>
+<p><strong>原文位置</strong>：Abstract、Section 1（PDF 第 1–2 页）。</p>
+<h2>2. Witness 与 One-Way Function：证明的秘密是什么？</h2>
+<h3>2.1 单向函数（OWF）</h3>
+<p>设公开函数满足：</p>
+<p>$$
+y=f(x).
+$$</p>
+<p>已知输入 $x$ 时，计算输出 $y$ 相对容易；但仅知道 $f$、 $y$ 时，寻找某个满足 $f(x')=y$ 的输入 $x'$ 在计算上困难。这种性质称为<strong>单向性</strong>。</p>
+<p>单向性有一个重要限制：</p>
+<blockquote>
+<p><strong>完整输入难以恢复，并不自动意味着输入的任意部分都难以预测。</strong></p>
+</blockquote>
+<p>这一差异是后文 PGOW 安全分析的起点。</p>
+<h3>2.2 秘密见证（Witness）</h3>
+<p>如果公开命题是“存在 $x$ 使 $f(x)=y$”，那么可以证明此命题的秘密输入就是一个 <em>witness</em>（见证）。在论文中，作者把底层求逆问题转化为多项式约束：</p>
+<p>$$
+F_y(x)=0.
+$$</p>
+<p>这里 $F_y$ 称为 <strong>witness-checking function</strong>。用于证明的见证 $x$ 可能包含从原始私钥输入导出的辅助信息，不一定与原始输入完全相同。</p>
+<p>在学习 MPC-in-the-Head 时，需要特别区分三个概念：</p>
+<p><strong>Private Key（私钥）</strong>：签名者用于生成合法签名的秘密信息。</p>
+<p><strong>Witness（秘密见证）</strong>：证明者知道的、满足公开数学约束的秘密解。</p>
+<p><strong>Secret Share（秘密份额）</strong>：为了保护秘密见证并实现证明协议而生成的辅助数据。</p>
+<p><strong>私钥与 Witness 不一定在数学表示上完全相同，但 Witness 通常可以由私钥中的核心秘密及相关计算信息构造出来。</strong></p>
+<p>在论文考虑的底层单向函数中，设公开函数为 f，公开输出为 ȳ，秘密输入为 x̄。</p>
+<p>签名者知道满足以下关系的秘密输入：</p>
+<p>$$
+f(\bar{x})=\bar{y}
+$$</p>
+<p>在某些方案中，原始秘密输入可以直接作为 Witness；在另一些方案中，还需要引入辅助变量，将其扩展为适合多项式证明的见证 x。</p>
+<p>见证满足：</p>
+<p>$$
+F_y(x)=0
+$$</p>
+<p>其中 $F_y$ 是公开的见证检查函数。</p>
+<p>为了在 MPCitH 中保护这个秘密见证，证明者利用 GGM Seed Tree 和 PRG 生成若干伪随机份额：</p>
+<p>$$
+s_0,s_1,\ldots,s_{N-1}
+$$</p>
+<p>然后计算修正量：</p>
+<p>$$
+\Delta_x=x-\sum_{i=0}^{N-1}s_i
+$$</p>
+<p>因此得到：</p>
+<p>$$
+\boxed{x=\Delta_x+\sum_{i=0}^{N-1}s_i}
+$$</p>
+<p>这说明：</p>
+<p>Private Key 决定签名者掌握什么长期秘密，Witness 将秘密表达为满足公开数学关系的解，而 Secret Shares 是为了证明这个解而生成的辅助数据。</p>
+<p>在我们阅读的论文中，关联 GGM 树具有特殊的 XOR 不变量：</p>
+<p>$$
+\delta=\mathrm{First}_{\lambda}(x)
+$$</p>
+<p>这意味着 GGM 树中的种子与秘密见证的前 λ 个比特存在数学关联。</p>
+<p>如果攻击者利用这种关联恢复了原本隐藏的叶子种子，就可能进一步恢复对应的秘密份额。</p>
+<p>一旦所有必要份额都能够恢复，攻击者就可以结合公开的修正量重构秘密见证：</p>
+<p>$$
+x=\Delta_x+\sum_i s_i
+$$</p>
+<p>这解释了为什么论文特别关注关联 GGM 树可能引入的秘密恢复攻击，以及为什么需要 PGOW 等额外安全条件。</p>
+<p><strong>原文位置</strong>：Section 2，<em>Witness-checking function</em>（PDF 第 4–5 页）。</p>
+<h2>3. MPC-in-the-Head：为什么不需要真实的多个参与者？</h2>
+<p>MPCitH 并不需要真的组织多个远程计算参与者。证明者在本地模拟多个虚拟参与者共同执行一个计算：</p>
+<ol>
+<li>将秘密拆成随机份额；</li>
+<li>模拟各参与者的计算视图；</li>
+<li>对这些视图作出密码学承诺；</li>
+<li>根据挑战开放其中一部分；</li>
+<li>验证者检查开放的视图是否一致、计算是否正确。</li>
+</ol>
+<p>协议希望满足：</p>
+<ul>
+<li><strong>Completeness（完备性）</strong>：诚实证明者可以通过验证；</li>
+<li><strong>Soundness（可靠性）</strong>：不诚实证明者难以让错误陈述通过验证；</li>
+<li><strong>Zero-Knowledge（零知识性）</strong>：验证过程不应泄露不必要的秘密信息。</li>
+</ul>
+<p>可把它理解为：<strong>不直接公开秘密，而是展示足以被随机检查的计算证据</strong>。</p>
+<h2>4. Additive Secret Sharing：如何拆分秘密？</h2>
+<p>在适当的有限域上，秘密可以写成多个份额之和：</p>
+<p>$$
+x=\sum_{i=0}^{N-1}s_i.
+$$</p>
+<p>对于二进制向量，求和可以使用 XOR 表示：</p>
+<p>$$
+x=s_0\oplus s_1\oplus\cdots\oplus s_{N-1}.
+$$</p>
+<p>当份额按照标准随机加法秘密分享生成时，即使已经公开其他份额，只要还有一个必要的均匀随机份额未公开，完整秘密仍不能被确定。<strong>这里依靠的是份额的随机性，而不是 XOR 不可逆。</strong></p>
+<p>论文让 GGM 树叶子种子经 PRG 扩展为秘密份额：</p>
+<p>$$
+\left[\left[x\right]\right]_i=\mathrm{PRG}(\mathrm{lseed}[i])
+$$</p>
+<p>其中：</p>
+<ul>
+<li><code class="notranslate">lseed[i]</code> 表示 GGM 树的第 i 个叶子种子。</li>
+<li><code class="notranslate">PRG</code> 表示伪随机生成器。</li>
+<li>双中括号表示秘密份额，而不是普通的数学取整操作。</li>
+</ul>
+<p>由于这些伪随机份额的总和未必等于秘密见证，<br>
+作者引入修正量：</p>
+<p>$$
+\Delta_x=x-\sum_{i=0}^{N-1}\left[\left[x\right]\right]_i
+$$</p>
+<p>因此：</p>
+<p>$$
+x=\Delta_x+\sum_{i=0}^{N-1}\left[\left[x\right]\right]_i
+$$</p>
+<p>只需把修正量加上所有份额，<br>
+就能使全部修正后份额之和等于秘密见证 x。</p>
+<p><strong>原文位置：</strong> Section 2，Equation (2)，PDF 第 3 页。</p>
+<h2>5. GGM Seed Tree：如何低成本开放大量份额？</h2>
+<p>GGM 树通过种子派生函数，把一个父种子扩展为两个子种子：</p>
+<p>$$
+G(s)=(s_L,s_R).
+$$</p>
+<p>设叶子数为 $N=2^\ell$，树高为：</p>
+<p>$$
+\ell=\log_2N.
+$$</p>
+<p>如果要开放除第 $i^*$ 个叶子之外的所有叶子，直接公开需要 $N-1$ 个种子。GGM 树只需公开<strong>从隐藏叶子向根追溯时，每一级的兄弟节点</strong>：</p>
+<p>$$
+\boxed{\text{公开种子数量}=\log_2N.}
+$$</p>
+<p>例如 $N=16$ 时，公开 4 个兄弟路径种子即可重建另外 15 个叶子；隐藏叶子及其祖先路径仍不公开。</p>
+<p>这种压缩的隐藏性依赖种子派生函数的密码学安全性，而不只是依赖树结构。</p>
+<p><strong>原文位置</strong>：Section 2，Equation (1)，PDF 第 3 页。</p>
+<h2>6. Correlated GGM Tree：XOR 不变量为什么能缩短签名？</h2>
+<p>关联 GGM 树与普通 GGM 树的区别在于：树中各相关层的全部节点 XOR 之和被规定为同一个值 $\delta$：</p>
+<p>$$
+\boxed{\bigoplus_{v\in L_j}v=\delta.}
+$$</p>
+<p>其中 $L_j$ 表示第 $j$ 层节点集合。为了维持不变量，作者使用特殊的派生函数：</p>
+<p>$$
+G(s)=(H(s),H(s)\oplus s).
+$$</p>
+<p>由于：</p>
+<p>$$
+H(s)\oplus(H(s)\oplus s)=s,
+$$</p>
+<p>每一对兄弟节点的 XOR 等于父节点，因此后一层的全部节点 XOR 等于前一层的全部节点 XOR。</p>
+<p>论文将固定值与秘密见证关联：</p>
+<p>$$
+\delta=\mathrm{First}_{\lambda}(x)
+$$</p>
+<p>并令每个叶子种子生成的份额包含种子本身：</p>
+<p>$$
+\left[\left[x\right]\right]_i=\mathrm{lseed}[i]\parallel\mathrm{PRG}(\mathrm{lseed}[i])
+$$</p>
+<p>其中：</p>
+<ul>
+<li><code class="notranslate">lseed[i]</code> 表示第 i 个 GGM 叶子种子。</li>
+<li><code class="notranslate">PRG</code> 表示伪随机生成器。</li>
+<li><code class="notranslate">||</code> 表示比特串拼接。</li>
+<li>双中括号表示秘密份额。</li>
+</ul>
+<p>如此一来，所有份额的前 $\lambda$ 比特与见证对应部分相抵消，修正量满足：</p>
+<p>$$
+\boxed{
+\mathrm{First}_{\lambda}(\Delta_x)=0
+}
+$$</p>
+<p>这部分恒为零的比特无需传输，因此每棵树节省 $\lambda$ 比特。论文举例，当 $\lambda=128$ 且使用 12–16 棵树时，可节省 192–256 字节。</p>
+<p>但<strong>优化也是风险来源</strong>：节点和见证的前 $\lambda$ 比特存在明确的代数联系，不能未经证明就认为这种优化与普通 GGM 树一样安全。</p>
+<p><strong>原文位置</strong>：Section 2，<em>Correlated GGM Trees</em>（PDF 第 3–4 页）。</p>
+<h2>7. Line Commitment Scheme（LCS）：隐藏份额，如何仍然计算多项式求值？</h2>
+<p>LCS 将秘密见证编码为一次多项式的最高次项系数。论文构造：</p>
+<p>$$
+P_x(X)=\Delta_x P_0(X)+\sum_{i=0}^{N-1}\left[\left[x\right]\right]_i P_i(X)
+$$</p>
+<p>其中 $P_i$ 为特殊的一次多项式，满足：</p>
+<p>$$
+P_i(\omega_i)=0, \qquad P_i(\infty)=1
+$$</p>
+<p>这里的 $P_i(\infty)$ <strong>是论文对一次项系数的记号</strong>，并不是把无穷大直接代入多项式。因此：</p>
+<p>$$
+P_x(\infty)=
+\Delta_x+
+\sum_{i=0}^{N-1}
+\left[\left[x\right]\right]_i
+=x
+$$</p>
+<h3>LCS 两个关键条件的数学意义</h3>
+<p>LCS 构造一次多项式时，要求辅助多项式满足两个条件：</p>
+<p><strong>条件一：一次项系数等于1。</strong></p>
+<p>$$
+P_i(\infty)=1
+$$</p>
+<p>这样，修正量与所有秘密份额组合后，最终多项式的一次项系数恰好等于秘密见证：</p>
+<p>$$
+P_x(\infty)=\Delta_x+\sum_i s_i=x
+$$</p>
+<p><strong>条件二：在指定求值点等于0。</strong></p>
+<p>$$
+P_i(\omega_i)=0
+$$</p>
+<p>如果第 <code class="notranslate">i</code> 个秘密份额保持隐藏，那么在对应的求值点，隐藏份额的贡献为：</p>
+<p>$$
+s_iP_i(\omega_i)=0
+$$</p>
+<p>因此，验证者无需知道这个隐藏份额，也能利用其余公开份额和修正量计算指定的多项式求值。</p>
+<p><strong>总结：第一个条件解决如何编码 Witness，第二个条件解决如何在隐藏份额的情况下计算特定求值。</strong></p>
+<p>需要注意，隐藏性还依赖秘密分享与底层密码学组件的安全性质，而不是单纯依靠多项式在某个点等于0。</p>
+<h3>隐藏份额为何不会影响指定求值？</h3>
+<p>假设隐藏第 i* 个秘密份额，验证者需要计算：</p>
+<p>$$
+P_x(\omega_{i^{\ast}})
+$$</p>
+<p>根据 LCS 的多项式构造：</p>
+<p>$$
+
+P_x(\omega_{i^{\ast}})=
+
+\Delta_x P_0(\omega_{i^{\ast}})
+
++
+
+\sum_{i=0}^{N-1}
+
+\left[\left[x\right]\right]_i
+
+P_i(\omega_{i^{\ast}})
+
+$$</p>
+<p>隐藏份额对应的项为：</p>
+<p>$$
+
+\left[\left[x\right]\right]_{i^{\ast}}
+
+P_{i^{\ast}}(\omega_{i^{\ast}})
+
+$$</p>
+<p>根据 LCS 的特殊构造：</p>
+<p>$$
+\boxed{
+P_{i^{\ast}}(\omega_{i^{\ast}})=0
+}
+$$</p>
+<p>因此，隐藏份额对应的整项等于 0。</p>
+<p>原式可以化简为：</p>
+<p>$$
+
+P_x(\omega_{i^{\ast}})=
+
+\Delta_x P_0(\omega_{i^{\ast}})
+
++
+
+\sum_{i\ne i^{\ast}}
+
+\left[\left[x\right]\right]_i
+
+P_i(\omega_{i^{\ast}})
+
+$$</p>
+<p>其中，求和范围仍为全部叶子索引，只是排除了隐藏的第 i* 个份额。</p>
+<p><strong>因此，即使验证者不知道隐藏份额的值，仍然能够利用其他公开份额和修正量，计算指定的多项式求值。</strong></p>
+<p>这就是 LCS 能够支持 All-but-One Opening（隐藏一个份额、开放其余份额）的关键原因。</p>
+<h3>一个便于复习的例子</h3>
+<p>仅为直观理解，我们在有限域 $\mathbb F_{11}$ 上计算。设 $x=9$、 $s_0=2$、 $s_1=4$，则：</p>
+<p>$$
+\Delta_x=9-2-4=3.
+$$</p>
+<p>取 $P_0(X)=X$、 $P_1(X)=X-1$，得到：</p>
+<p>$$
+P_x(X)=3X+2X+4(X-1)=9X-4.
+$$</p>
+<p>隐藏 $s_1=4$，但仍可求：</p>
+<p>$$
+P_x(1)=3+2+s_1(1-1)=5.
+$$</p>
+<p>隐藏份额乘上零，因此无需公开。实际论文基于二进制有限域；本例只展示代数机制。</p>
+<p><strong>注意</strong>：LCS 的完整安全性还依赖承诺的绑定性质，不能仅靠这一等式保证。</p>
+<p><strong>原文位置</strong>：Section 2，Equation (3)，PDF 第 5 页。</p>
+<h2>8. Polynomial IOP（PIOP）：如何证明秘密满足约束？</h2>
+<h3>8.1 为什么需要 PIOP？</h3>
+<p>上一节的 LCS 解决了一个问题：<strong>如何在不公开完整 Witness 的情况下，检查指定的多项式求值？</strong></p>
+<p>但是，LCS 无法单独证明 Witness 满足公开约束：</p>
+<p>$$
+F_y(x)=0
+$$</p>
+<p>因此，需要引入 Polynomial Interactive Oracle Proof（PIOP），利用多项式关系和随机求值验证秘密见证的正确性。</p>
+<h3>8.2 PIOP 的核心数学原理</h3>
+<p>PIOP 将秘密见证编码为一次多项式：</p>
+<p>$$
+P_x(X)=xX+r
+$$</p>
+<p>其中一次项系数就是秘密见证 <code class="notranslate">x</code>。</p>
+<p>假设公开约束为：</p>
+<p>$$
+F_y(x)=x^2-9=0
+$$</p>
+<p>在有限域 <code class="notranslate">F₁₁</code> 上，如果 Witness 正确，取 <code class="notranslate">x=3</code>，并构造：</p>
+<p>$$
+P_x(X)=3X+2
+$$</p>
+<p>通过齐次化构造约束多项式：</p>
+<p>$$
+P_z(X)=P_x(X)^2-9X^2
+$$</p>
+<p>展开得到：</p>
+<p>$$
+P_z(X)=12X+4=X+4
+$$</p>
+<p>注意这里是在有限域 <code class="notranslate">F₁₁</code> 上进行的计算。</p>
+<p>可以发现：<strong>二次项被消去了，最终多项式的次数不超过1。</strong></p>
+<p>如果 Witness 错误，例如 <code class="notranslate">x=4</code>，那么：</p>
+<p>$$
+P_z(X)=(4X+2)^2-9X^2
+$$</p>
+<p>化简得到：</p>
+<p>$$
+P_z(X)=7X^2+5X+4
+$$</p>
+<p>此时二次项没有消失。</p>
+<p>因此，PIOP 利用了一个重要性质：</p>
+<p><strong>正确的 Witness 使约束多项式的二次项消失，而错误的 Witness 通常会保留非零二次项。</strong></p>
+<h3>8.3 PIOP 如何进行验证？</h3>
+<p>论文 Figure 1 引入以下对象：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>符号</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$P_x$</td>
+<td>编码秘密见证</td>
+</tr>
+<tr>
+<td>$P_u$</td>
+<td>随机掩码，保护秘密信息</td>
+</tr>
+<tr>
+<td>$P_z$</td>
+<td>表示 Witness 的数学约束</td>
+</tr>
+<tr>
+<td>$Γ$</td>
+<td>随机挑战，用于组合约束</td>
+</tr>
+<tr>
+<td>$P_α$</td>
+<td>用于验证的多项式</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>证明者构造：</p>
+<p>$$
+P_\alpha=P_u+\Gamma P_z
+$$</p>
+<p>验证者随机选择求值点 <code class="notranslate">ω</code>，并检查：</p>
+<p>$$
+\boxed{
+P_\alpha(\omega)=P_u(\omega)+\Gamma P_z(\omega)
+}
+$$</p>
+<p>其中， $P_z$ 的求值使用论文定义的齐次化约束。</p>
+<p>为什么随机检查有效？</p>
+<p>根据 <strong>Schwartz–Zippel 引理</strong>，非零二次多项式最多只有两个不同的根。</p>
+<p>因此，在多项式次数受到承诺机制约束、随机挑战有效的条件下，错误关系通过随机检查的概率可以被控制。</p>
+<p>论文给出的单次 PIOP 可靠性误差为：</p>
+<p>$$
+\boxed{\varepsilon=\frac{2}{|\Omega|}}
+$$</p>
+<p>其中 <code class="notranslate">Ω</code> 是允许选择的求值点集合。</p>
+<h3>8.4 PIOP 与 LCS 的关系</h3>
+<ul>
+<li><strong>LCS：</strong> 在隐藏部分秘密份额的情况下，提供可验证的多项式求值。</li>
+<li><strong>PIOP：</strong> 利用这些求值，检查秘密见证是否满足公开数学约束。</li>
+</ul>
+<p><strong>总结：PIOP 将 Witness 是否满足公开约束的问题，转化为低次数多项式之间的关系检查，并利用随机求值提高验证的可靠性。</strong></p>
+<p><strong>原文位置：</strong> Section 2，Polynomial IOP，PDF 第5–6页，重点 Figure 1。</p>
+<h2>9. Fiat–Shamir Transform：为什么数字签名不需要实时交互？</h2>
+<h3>9.1 交互式证明存在什么问题？</h3>
+<p>在前面学习的 PIOP 中，证明过程通常需要三个步骤：</p>
+<ol>
+<li><strong>Commitment（承诺）</strong>：证明者 Alice 先向验证者 Bob 发送承诺 <code class="notranslate">C</code>。</li>
+<li><strong>Challenge（挑战）</strong>：Bob 随机生成挑战 <code class="notranslate">c</code>，发送给 Alice。</li>
+<li><strong>Response（响应）</strong>：Alice 根据挑战生成响应 <code class="notranslate">z</code>，Bob 检查其正确性。</li>
+</ol>
+<p>但是，数字签名需要能够独立生成。例如，Alice 给一份文件签名时，不能要求 Bob 必须在线、实时发送随机挑战。</p>
+<p>因此，我们需要消除交互过程。</p>
+<h3>9.2 Fiat–Shamir 如何消除交互？</h3>
+<p>Fiat–Shamir Transform 的核心思想是：</p>
+<p><strong>使用密码学哈希函数自动生成挑战，代替验证者实时发送随机挑战。</strong></p>
+<p>简化公式为：</p>
+<p>$$
+\boxed{c=H(C\parallel m)}
+$$</p>
+<p>其中：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>符号</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code class="notranslate">c</code></td>
+<td>Challenge，验证时使用的挑战</td>
+</tr>
+<tr>
+<td><code class="notranslate">H</code></td>
+<td>密码学哈希函数</td>
+</tr>
+<tr>
+<td><code class="notranslate">C</code></td>
+<td>Commitment，证明者事先生成的承诺</td>
+</tr>
+<tr>
+<td><code class="notranslate">m</code></td>
+<td>Message，需要签名的消息</td>
+</tr>
+<tr>
+<td><code class="notranslate">∥</code></td>
+<td>Concatenation，表示将两个数据拼接</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>例如，Alice 想对消息 <code class="notranslate">Hello</code> 生成签名。</p>
+<p>她首先生成承诺 <code class="notranslate">C</code>，随后计算：</p>
+<p>$$
+c=H(C\parallel\mathrm{Hello})
+$$</p>
+<p>哈希函数根据输入产生确定的结果，Alice 再将该结果转换为协议要求的挑战，并生成响应 <code class="notranslate">z</code>。</p>
+<p>于是，Alice 可以独立生成非交互式证明：</p>
+<p>$$
+\pi=(C,z)
+$$</p>
+<p>Bob 收到消息和证明后，使用同样的哈希函数重新计算：</p>
+<p>$$
+c=H(C\parallel m)
+$$</p>
+<p>由于相同输入始终产生相同的哈希输出，因此 Bob 可以独立得到相同挑战，并检查响应是否有效。</p>
+<p><strong>这样，Alice 不需要等待 Bob 实时发送挑战，Bob 也可以在任何时间验证证明。</strong></p>
+<h3>9.3 为什么证明者不能随意作弊？</h3>
+<p>一个重要问题是：既然 Alice 自己计算挑战，为什么不能选择对自己有利的挑战？</p>
+<p>关键在于，挑战由承诺和消息共同决定：</p>
+<p>$$
+c=H(C\parallel m)
+$$</p>
+<p>对于已经确定的 <code class="notranslate">C</code> 和 <code class="notranslate">m</code>，Alice 不能任意指定哈希结果。</p>
+<p>同时，Bob 会独立重新计算挑战，因此 Alice 不能直接提交一个与哈希结果不一致的挑战。</p>
+<p>不过，Alice 仍可能尝试生成多个不同的承诺，寻找有利的挑战。因此，Fiat–Shamir 的安全性并不是自动成立的，还需要在适当的密码学模型下进行严格证明。</p>
+<h3>9.4 与本文 MPCitH 签名方案的联系</h3>
+<p>论文 Section 5.1 的 Figure 5 使用了两阶段 Fiat–Shamir 变换。</p>
+<p>第一阶段，根据 LCS 承诺生成随机挑战：</p>
+<p>$$
+\Gamma=\mathrm{XOF}_1(\mathrm{com}_1)
+$$</p>
+<p>第二阶段，将多项式信息、前一阶段承诺以及待签名消息组合起来，再生成隐藏叶子索引挑战：</p>
+<p>$$
+i^*=\mathrm{XOF}_2(\mathrm{com}_2)
+$$</p>
+<p>其中，第二阶段的 <code class="notranslate">com₂</code> 包含消息信息，因此最终挑战与待签名消息相关联。</p>
+<p>这使原本需要验证者参与的 PIOP 能够转化为可独立生成和验证的数字签名。</p>
+<p><strong>总结：Fiat–Shamir 并没有取消随机挑战，而是利用哈希函数生成可重复计算的挑战，从而将交互式证明转化为非交互式证明。</strong></p>
+<p><strong>原文位置：</strong> Section 5.1，Figure 5，PDF 第26–27页。</p>
+<h2>10. EUF-KO 与 EUF-CMA：攻击者能看到多少信息？</h2>
+<h3>EUF-KO</h3>
+<p><strong>Existential Unforgeability under Key-Only Attacks</strong>：攻击者仅获得公钥，目标是伪造能够通过验证的签名。</p>
+<h3>EUF-CMA</h3>
+<p><strong>Existential Unforgeability under Chosen-Message Attacks</strong>：攻击者除获得公钥外，还能选择消息请求合法签名；最终必须伪造一条此前未向签名预言机请求过的<strong>新消息</strong>的有效签名。</p>
+<p>两者关系为：</p>
+<p>$$
+\boxed{\text{EUF-CMA 安全}\Rightarrow\text{EUF-KO 安全}.}
+$$</p>
+<p>反过来一般不成立。</p>
+<p>关联 GGM 树值得特别注意，是因为攻击者可以在 EUF-CMA 场景中多次观察合法签名的开放信息，而这些信息涉及与长期见证相关的 XOR 结构。因此，证明 EUF-KO 安全还不够，必须单独分析签名查询是否带来信息泄露。</p>
+<p><strong>原文位置</strong>：Section 3，PDF 第 7 页。</p>
+<h2>11. ROM、ICM 与 Davies–Meyer：安全证明依赖什么模型？</h2>
+<h3>11.1 Random Oracle Model（ROM）</h3>
+<p>随机预言机是理想随机函数：相同输入总是返回相同输出，对尚未查询的新输入则按模型产生随机输出。它并不要求可逆。</p>
+<p>现实中的 SHA3、SHAKE 等具体算法<strong>不等于</strong>真正的随机预言机。</p>
+<h3>11.2 Ideal Cipher Model（ICM，理想分组密码模型）</h3>
+<p>Ideal Cipher Model（ICM）是一种用于密码学安全证明的理想化模型。</p>
+<p>它将分组密码（例如 AES）视为一组<strong>由密钥决定的随机置换（Random Permutations）</strong>。</p>
+<p>假设分组密码的加密过程为：</p>
+<p>$$
+c=E_k(m)
+$$</p>
+<p>其中：</p>
+<ul>
+<li><code class="notranslate">k</code>：加密密钥。</li>
+<li><code class="notranslate">m</code>：明文。</li>
+<li><code class="notranslate">c</code>：密文。</li>
+<li><code class="notranslate">E_k</code>：使用密钥 <code class="notranslate">k</code> 的加密函数。</li>
+</ul>
+<p><strong>理想分组密码具有三个重要性质：</strong></p>
+<ol>
+<li><strong>随机置换：</strong> 对于每个固定密钥 <code class="notranslate">k</code>，加密函数表现为从所有可能置换中均匀随机选择的一个置换。</li>
+<li><strong>可逆性：</strong> 不同明文在同一密钥下不会产生相同密文，可以通过解密恢复明文。</li>
+<li><strong>确定性：</strong> 相同密钥和相同明文始终得到相同密文，而不是每次重新生成随机结果。</li>
+</ol>
+<p>因此：</p>
+<p>$$
+\boxed{D_k(E_k(m))=m}
+$$</p>
+<p>其中 <code class="notranslate">D_k</code> 表示解密函数。</p>
+<p><strong>与 Random Oracle Model（ROM）的区别：</strong></p>
+<ul>
+<li>ROM 将哈希函数建模为随机函数，不要求可逆，也允许不同输入产生相同输出。</li>
+<li>ICM 将每个密钥对应的分组密码建模为随机置换，要求加密和解密互为逆运算。</li>
+</ul>
+<p><strong>在本文中的作用：</strong></p>
+<p>论文研究使用 Davies–Meyer 构造的 GGM 种子扩展函数：</p>
+<p>$$
+H_{\mathrm{sep}}(s)=E_{\mathrm{sep}}(s)\oplus\sigma(s)
+$$</p>
+<p>其中 <code class="notranslate">sep</code> 是公开的域分离字符串，用作分组密码密钥。</p>
+<p>因此，如果攻击者能够恢复中间加密结果 <code class="notranslate">E_sep(s)</code>，就可以利用公开密钥解密，得到原始种子 <code class="notranslate">s</code>。</p>
+<p>但仅知道最终输出 <code class="notranslate">H_sep(s)</code>，并不意味着能够直接恢复种子。</p>
+<p>这也是论文在 ICM 下需要额外分析种子恢复风险，并引入 RGOW 安全条件的重要原因。</p>
+<p><strong>注意：ICM 是数学上的理想化模型，现实中的 AES 并不是真正的随机置换族，只是可以在相应安全分析中被建模为理想分组密码。</strong></p>
+<h3>11.3 Davies–Meyer 及论文的具体变体</h3>
+<p>标准 Davies–Meyer 结构通常记作：</p>
+<p>$$
+H(h,m)=E_m(h)\oplus h.
+$$</p>
+<p>论文研究的实例化形式为：</p>
+<p>$$
+\boxed{H_{\mathrm{sep}}(s)=E_{\mathrm{sep}}(s)\oplus\sigma(s).}
+$$</p>
+<p>其中 $\mathrm{sep}$ 是公开的域分离字符串， $\sigma$ 是论文要求的特定线性变换。</p>
+<p>如果攻击者成功获得中间的加密输出 $E_{\mathrm{sep}}(s)$，则因密钥 $\mathrm{sep}$ 公开，可以执行：</p>
+<p>$$
+s=D_{\mathrm{sep}}(E_{\mathrm{sep}}(s)).
+$$</p>
+<p>这可能导致隐藏种子被恢复。但<strong>仅有最终输出 $H_{\mathrm{sep}}(s)$ 并不意味着已经知道中间值 $E_{\mathrm{sep}}(s)$</strong>。</p>
+<p>正因如此，论文需要研究相关输出被猜中的攻击途径，以及额外的 RGOW 安全条件。</p>
+<p><strong>原文位置</strong>：Section 3.2、4.1、4.3–4.6。</p>
+<h2>12. Security Reduction：怎样证明签名安全？</h2>
+<p>安全归约的核心逻辑为：</p>
+<p>$$
+\boxed{\text{能够高效攻破签名}\Longrightarrow\text{能够高效解决底层困难问题}.}
+$$</p>
+<p>如果存在签名伪造者 $A$，研究者尝试构造算法 $B$，利用 $A$ 的能力解决底层数学困难问题。证明需要给出：</p>
+<ul>
+<li>依赖的困难性假设；</li>
+<li>算法 $B$ 如何模拟 $A$ 的攻击环境；</li>
+<li>
+$B$ 如何利用伪造结果；</li>
+<li>归约的时间开销和成功概率损失。</li>
+</ul>
+<p><strong>归约不等于绝对安全</strong>。它是在明确假设与资源限制下获得的安全保证。若归约损失较大，最终的具体安全界可能较弱；这就引出了 <em>tight reduction</em>（紧归约）的重要性。</p>
+<h3>论文的核心归约路线</h3>
+<p>论文在通常的 EUF-KO 证明基础上，研究能否把合法签名查询所暴露的关联树信息安全地模拟出来：</p>
+<p>$$
+\text{EUF-KO 安全}
++\text{关联树开放的模拟安全}
+\Longrightarrow
+\text{EUF-CMA 安全界（附加误差项）}.
+$$</p>
+<p>这里还需要分析哈希相关事件、盐值碰撞以及模拟误差等因素。不能把上式直接理解为没有损失的无条件定理。</p>
+<p><strong>原文位置</strong>：Section 4 与 Section 5.2（尤其 Theorem 5）。</p>
+<hr>
+<h2>13. 十二课如何串联？</h2>
+<pre lang="text" class="notranslate"><code class="notranslate">公开单向函数与秘密 Witness
+          ↓
+MPC-in-the-Head：模拟多方计算
+          ↓
+Additive Secret Sharing：拆分秘密
+          ↓
+GGM Seed Tree：高效生成和开放种子
+          ↓
+Correlated GGM Tree：利用 XOR 不变量压缩签名
+          ↓
+LCS：将秘密编码到一次多项式
+          ↓
+PIOP：随机求值检查公开约束
+          ↓
+Fiat–Shamir：消除交互，形成数字签名
+          ↓
+EUF-KO / EUF-CMA：定义攻击者能力
+          ↓
+ROM / ICM + Security Reduction：证明安全性
+</code></pre>
+<p>整篇论文的关键研究问题可以概括为：</p>
+<blockquote>
+<p><strong>当 GGM 树为了压缩签名而引入与秘密见证相关的 XOR 不变量后，如何证明这种结构仍能抵抗选择消息攻击？需要哪些新的安全条件？</strong></p>
+</blockquote>
+<h2>14. 第一轮科研级精读的重点</h2>
+<p>第零轮已经解决了概念问题，但尚未完成正式定理与攻击证明。第一轮需要重点回答：</p>
+<ol>
+<li>
+<strong>Section 3.1：</strong> 为什么恢复 $\mathrm{First}_{\lambda}(x)$ 就能恢复隐藏节点，进一步恢复完整见证？PGOW 游戏如何定义？</li>
+<li>
+<strong>Section 3.2：</strong> Davies–Meyer 中哪些线性关系可能导致分组密码输出可猜测？RGOW 与 PGOW 区别何在？</li>
+<li>
+<strong>Section 4.1–4.3：</strong> 什么是真实世界与理想世界？如何定义区分优势？H-Coefficient 技术如何划分 Good / Bad transcripts？</li>
+<li>
+<strong>Section 4.4–4.6：</strong> 为什么 ROM、Davies–Meyer、Counter Mode 和 Enhanced Davies–Meyer 的安全条件及归约紧性不同？</li>
+<li>
+<strong>Section 5：</strong> 如何将关联树的模拟安全性转化为签名的 EUF-CMA 安全界？为什么 MQOM v2 的具体实例化值得讨论？</li>
+</ol>
+<h2>15. 学习阶段总结</h2>
+<p>当前已经建立的能力是：</p>
+<ul>
+<li>能解释 Witness、OWF、MPCitH 与秘密分享的关系；</li>
+<li>能说明 GGM 兄弟路径的压缩机制和关联树的 XOR 不变量；</li>
+<li>能理解 LCS 的隐藏份额求值原理及 PIOP 的随机多项式检查；</li>
+<li>能区分 Fiat–Shamir、EUF-KO、EUF-CMA、ROM、ICM 与安全归约；</li>
+<li>能说清论文为什么需要额外分析关联树的安全性。</li>
+</ul>
+<p>尚需训练的是<strong>形式化安全游戏、公式逐步推导、攻击构造、概率上界与定理证明</strong>。这些将是第一轮论文精读的重点。</p>
+<hr>
+<h2>参考文献与阅读索引</h2>
+<p><strong>主要文献</strong>：Feneuil, Thibauld, and Matthieu Rivain. <em>On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees</em>. 2026.</p>
+<ul>
+<li><strong>Section 2（PDF 第 3–6 页）</strong>：GGM 树、秘密分享、关联树、LCS、PIOP；</li>
+<li><strong>Section 3（PDF 第 7–10 页）</strong>：EUF-KO/EUF-CMA、λ-bit Attack、PGOW、RGOW；</li>
+<li><strong>Section 4（PDF 第 10–26 页）</strong>：关联树开放信息的模拟安全性及 ROM/ICM 分析；</li>
+<li><strong>Section 5（PDF 第 26–35 页）</strong>：签名安全性与 MQOM v2 分析。</li>
+</ul>
+<blockquote>
+<p>本文是基于论文及配套教学讨论整理的学习笔记。直观例子和技术链梳理由笔记作者为理解而添加，不应视作论文中的完整形式化证明。</p>
+</blockquote></div>
+<div style="font-size:small;margin-top:8px;float:right;"></div>
+
+<button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>
+<div class="comments" id="comments"></div>
+
+</div>
+    <div id="footer"><div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="https://starry-juniper.github.io">Blog Title</a></div>
+<div id="footer2">
+    <span id="runday"></span><span>Powered by <a href="https://meekdai.com/Gmeek.html" target="_blank">Gmeek</a></span>
+</div>
+
+<script>
+var now=new Date();
+document.getElementById("copyrightYear").innerHTML=now.getFullYear();
+
+if(""!=""){
+    var startSite=new Date("");
+    var diff=now.getTime()-startSite.getTime();
+    var diffDay=Math.floor(diff/(1000*60*60*24));
+    document.getElementById("runday").innerHTML="网站运行 "+diffDay+" 天"+" • ";
+}
+</script></div>
+</body>
+<script>
+var IconList={'sun': 'M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.343 2.343a.75.75 0 011.061 0l1.06 1.061a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zm9.193 9.193a.75.75 0 011.06 0l1.061 1.06a.75.75 0 01-1.06 1.061l-1.061-1.06a.75.75 0 010-1.061zM16 8a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0116 8zM3 8a.75.75 0 01-.75.75H.75a.75.75 0 010-1.5h1.5A.75.75 0 013 8zm10.657-5.657a.75.75 0 010 1.061l-1.061 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm-9.193 9.193a.75.75 0 010 1.06l-1.06 1.061a.75.75 0 11-1.061-1.06l1.06-1.061a.75.75 0 011.061 0z', 'moon': 'M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zm1.616 1.945a7 7 0 01-7.678 7.678 5.5 5.5 0 107.678-7.678z', 'sync': 'M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z', 'home': 'M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z', 'github': 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'};
+var utterancesLoad=0;
+
+let themeSettings={
+    "dark": ["dark","moon","#00f0ff","dark-blue"],
+    "light": ["light","sun","#ff5000","github-light"],
+    "auto": ["auto","sync","","preferred-color-scheme"]
+};
+function changeTheme(mode, icon, color, utheme){
+    document.documentElement.setAttribute("data-color-mode",mode);
+    document.getElementById("themeSwitch").setAttribute("d",value=IconList[icon]);
+    document.getElementById("themeSwitch").parentNode.style.color=color;
+    if(utterancesLoad==1){utterancesTheme(utheme);}
+}
+function modeSwitch(){
+    let currentMode=document.documentElement.getAttribute('data-color-mode');
+    let newMode = currentMode === "light" ? "dark" : currentMode === "dark" ? "auto" : "light";
+    localStorage.setItem("meek_theme", newMode);
+    if(themeSettings[newMode]){
+        changeTheme(...themeSettings[newMode]);
+    }
+}
+function utterancesTheme(theme){
+    const message={type:'set-theme',theme: theme};
+    const iframe=document.getElementsByClassName('utterances-frame')[0];
+    iframe.contentWindow.postMessage(message,'https://utteranc.es');
+}
+if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
+console.log("\n %c Gmeek last https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+
+<script>
+document.getElementById("pathHome").setAttribute("d",IconList["home"]);
+document.getElementById("pathIssue").setAttribute("d",IconList["github"]);
+
+
+
+function openComments(){
+    cm=document.getElementById("comments");
+    cmButton=document.getElementById("cmButton");
+    cmButton.disabled=true;
+    cmButton.innerHTML="loading";
+    span=document.createElement("span");
+    span.setAttribute("class","AnimatedEllipsis");
+    cmButton.appendChild(span);
+
+    script=document.createElement("script");
+    script.setAttribute("src","https://utteranc.es/client.js");
+    script.setAttribute("repo","starry-juniper/starry-juniper.github.io");
+    script.setAttribute("issue-term","title");
+    
+    if(localStorage.getItem("meek_theme")=="dark"){script.setAttribute("theme","dark-blue");}
+    else if(localStorage.getItem("meek_theme")=="light") {script.setAttribute("theme","github-light");}
+    else{script.setAttribute("theme","preferred-color-scheme");}
+    
+    script.setAttribute("crossorigin","anonymous");
+    script.setAttribute("async","");
+    cm.appendChild(script);
+
+    int=self.setInterval("iFrameLoading()",200);
+}
+
+function iFrameLoading(){
+    var utterances=document.getElementsByClassName('utterances');
+    if(utterances.length==1){
+        if(utterances[0].style.height!=""){
+            utterancesLoad=1;
+            int=window.clearInterval(int);
+            document.getElementById("cmButton").style.display="none";
+            console.log("utterances Load OK");
+        }
+    }
+}
+
+
+
+</script>
+<script>MathJax = {tex: {inlineMath: [["$", "$"]]}};</script><script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+</html>

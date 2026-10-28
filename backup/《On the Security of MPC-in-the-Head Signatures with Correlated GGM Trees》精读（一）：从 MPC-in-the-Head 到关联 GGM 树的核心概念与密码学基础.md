@@ -1,4 +1,3 @@
-# 《On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees》精读（一）：从 MPC-in-the-Head 到关联 GGM 树的核心概念与密码学基础
 
 > **论文**：*On the Security of MPC-in-the-Head Signatures with Correlated GGM Trees*  
 > **作者**：Thibauld Feneuil、Matthieu Rivain  

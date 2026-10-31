@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html data-color-mode="light" data-dark-theme="dark" data-light-theme="light" lang="zh-CN">
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css' rel='stylesheet' />
+    
+    <link rel="icon" href="https://github.githubassets.com/favicons/favicon.svg"><script>
+        let theme = localStorage.getItem("meek_theme") || "light";
+        document.documentElement.setAttribute("data-color-mode", theme);
+    </script>
+<meta name="description" content="## 0. 这篇论文在研究什么？
+
+格签名方案在签名过程中使用秘密随机性保护私钥。">
+<meta property="og:title" content="《Halfspace Learning for Lattice Signature Key Recovery from Signs》精读（一）：从侧信道符号泄漏到半空间学习的核心概念与数学基础">
+<meta property="og:description" content="## 0. 这篇论文在研究什么？
+
+格签名方案在签名过程中使用秘密随机性保护私钥。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://starry-juniper.github.io/post/%E3%80%8AHalfspace%20Learning%20for%20Lattice%20Signature%20Key%20Recovery%20from%20Signs%E3%80%8B-jing-du-%EF%BC%88-yi-%EF%BC%89%EF%BC%9A-cong-ce-xin-dao-fu-hao-xie-lou-dao-ban-kong-jian-xue-xi-de-he-xin-gai-nian-yu-shu-xue-ji-chu.html">
+<meta property="og:image" content="https://github.githubassets.com/favicons/favicon.svg">
+<title>《Halfspace Learning for Lattice Signature Key Recovery from Signs》精读（一）：从侧信道符号泄漏到半空间学习的核心概念与数学基础</title>
+
+
+
+</head>
+<style>
+body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;padding: 45px;font-size: 16px;font-family: sans-serif;line-height: 1.25;}
+#header{display:flex;padding-bottom:8px;border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));margin-bottom: 16px;}
+#footer {margin-top:64px; text-align: center;font-size: small;}
+
+</style>
+
+<style>
+.postTitle{margin: auto 0;font-size:40px;font-weight:bold;}
+.title-right{display:flex;margin:auto 0 0 auto;}
+.title-right .circle{padding: 14px 16px;margin-right:8px;}
+#postBody{border-bottom: 1px solid var(--color-border-default);padding-bottom:36px;}
+#postBody hr{height:2px;}
+#cmButton{height:48px;margin-top:48px;}
+#comments{margin-top:64px;}
+.g-emoji{font-size:24px;}
+@media (max-width: 600px) {
+    body {padding: 8px;}
+    .postTitle{font-size:24px;}
+}
+
+</style>
+
+
+
+
+<body>
+    <div id="header">
+<h1 class="postTitle">《Halfspace Learning for Lattice Signature Key Recovery from Signs》精读（一）：从侧信道符号泄漏到半空间学习的核心概念与数学基础</h1>
+<div class="title-right">
+    <a href="https://starry-juniper.github.io" id="buttonHome" class="btn btn-invisible circle" title="首页">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathHome" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+    <a href="https://github.com/starry-juniper/starry-juniper.github.io/issues/3" target="_blank" class="btn btn-invisible circle" title="Issue">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathIssue" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="切换主题">
+        <svg class="octicon" width="16" height="16" >
+            <path id="themeSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
+</div>
+</div>
+    <div id="content">
+<div class="markdown-body" id="postBody"><h2>0. 这篇论文在研究什么？</h2>
+<p>格签名方案在签名过程中使用秘密随机性保护私钥。即使签名算法的数学设计是安全的，具体实现仍可能通过功耗等<strong>侧信道</strong>泄露随机数的部分信息。</p>
+<p>这篇论文提出：对于 <strong>HAWK、Falcon 和 ML-DSA</strong>，如果攻击者能够额外获知某些签名随机数坐标的<strong>正负号</strong>，就有可能把密钥恢复转化为机器学习中的 <strong>Learning a Halfspace（半空间学习，LH）</strong> 问题。</p>
+<p>它的主要思路是：</p>
+<pre lang="text" class="notranslate"><code class="notranslate">签名设备运行
+    ↓
+功耗等侧信道泄漏
+    ↓
+推断秘密随机数的符号（+1 / -1）
+    ↓
+构造带标签的半空间学习样本
+    ↓
+通过 LP / LR 学习秘密向量的方向
+    ↓
+结合密钥分布恢复尺度并取整
+    ↓
+在满足相应条件时恢复秘密密钥
+</code></pre>
+<p><strong>重要前提：</strong> 论文研究的是<strong>存在额外随机数符号泄漏</strong>的实现攻击，并非只凭正常公开的消息和签名就能直接恢复私钥。</p>
+<p>以下 5 节是进入原文 Section 3 数学推导前所需的基础知识。</p>
+<hr>
+<h2>1. Side-Channel Leakage：侧信道泄漏</h2>
+<p><strong>核心问题：为什么密码算法在数学上安全，实际实现仍可能泄露秘密？</strong></p>
+<p>密码算法通常通过数学困难问题保护私钥，但算法运行在处理器、微控制器或专用芯片上时，还会产生额外的可观察信号，例如：</p>
+<ul>
+<li><strong>功耗（Power Consumption）</strong>：运算和数据变化可能导致功耗差异；</li>
+<li><strong>电磁辐射（Electromagnetic Emission）</strong>：芯片工作时产生的电磁信号；</li>
+<li><strong>执行时间（Timing）</strong>：不同输入可能触发不同耗时路径；</li>
+<li><strong>缓存行为（Cache Behavior）</strong>：存储访问模式可能与秘密数据相关。</li>
+</ul>
+<p>这些并不是密码算法设计上应当公开的输出，却可能成为攻击者推断内部状态的线索。</p>
+<p>以签名随机数 $x$ 为例，攻击者未必知道 $x$ 的准确数值，但如果设备处理 $x&amp;gt;0$ 和 $x&amp;lt;0$ 时呈现可区分的功耗特征，攻击者就<strong>可能</strong>推断出其符号。</p>
+<p>论文使用的符号函数定义为：</p>
+<p>$$
+\mathrm{sign}(x)=
+\begin{cases}
++1, &amp; x\ge 0,\\
+-1, &amp; x&lt;0.
+\end{cases}
+$$</p>
+<p>注意，论文把 <strong>$x=0$ 也归为标签 $+1$</strong>。</p>
+<h3>1.1 为什么只泄露 1 bit 也值得警惕？</h3>
+<p>乍一看，一个随机数的正负号只包含 1 bit 信息，似乎不足以威胁复杂的格密码系统。但问题的关键不在于<strong>单次泄漏的信息量，而在于大量泄漏之间存在的数学关系</strong>。</p>
+<p>假设签名算法中的某个随机数满足：</p>
+<p>$$
+x=\langle b,w\rangle
+$$</p>
+<p>其中， $b$ 是秘密密钥向量， $w$ 是攻击者已知的向量。</p>
+<p>如果攻击者获得了 $x$ 的正负号，就相当于知道了：</p>
+<ul>
+<li>
+<strong>正数或零：</strong> $\langle b,w\rangle\geq0$
+</li>
+<li>
+<strong>负数：</strong> $\langle b,w\rangle&amp;lt;0$
+</li>
+</ul>
+<p>虽然无法直接求出 $b$，但每个符号都为秘密向量增加了一条约束条件。</p>
+<p>当攻击者收集大量签名及其对应的符号泄漏时，这些约束便可能逐渐缩小秘密向量的候选范围。通过机器学习中的 <strong>Learning a Halfspace（半空间学习）</strong>，攻击者可以尝试恢复秘密向量的方向，再结合密钥分布等额外信息恢复完整密钥。</p>
+<p>因此，<strong>1 bit 的泄漏并不可怕在它本身，而在于它能够被反复收集，并转化为可用于密钥恢复的数学约束。</strong></p>
+<p>需要注意，这种攻击依赖具体签名方案的数学结构、足够的有效样本以及相应的侧信道泄漏条件，并不意味着任意 1 bit 泄漏都能恢复私钥。</p>
+<blockquote>
+<p>对应原文：Introduction 的 <strong>Sign Leakage</strong>；Section 4.1 的 <strong>Sign and Symbreak Leakage</strong>。</p>
+</blockquote>
+<hr>
+<h2>2. Two's Complement 与 Hamming Weight：补码为什么可能暴露符号？</h2>
+<p><strong>核心问题：正负数的二进制表示为什么可能产生不同功耗？</strong></p>
+<h3>2.1 Two's Complement（补码）</h3>
+<p>计算机通常使用固定宽度的二进制补码存储有符号整数。以 <strong>8 位补码</strong>为例：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>十进制整数</th>
+<th>8 位补码表示</th>
+<th align="right">汉明重量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$+3$</td>
+<td><code class="notranslate">00000011</code></td>
+<td align="right">2</td>
+</tr>
+<tr>
+<td>$-3$</td>
+<td><code class="notranslate">11111101</code></td>
+<td align="right">7</td>
+</tr>
+<tr>
+<td>$+5$</td>
+<td><code class="notranslate">00000101</code></td>
+<td align="right">2</td>
+</tr>
+<tr>
+<td>$-5$</td>
+<td><code class="notranslate">11111011</code></td>
+<td align="right">7</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>$-5$ 的补码可以由 $+5$ 得到：</p>
+<pre lang="text" class="notranslate"><code class="notranslate">+5          00000101
+逐位取反     11111010
+加 1        11111011   ← -5
+</code></pre>
+<p>补码不仅是“在前面加一个负号”。在固定字长内，较小的负数通常有较多高位 <code class="notranslate">1</code>，较小的非负数通常有较多高位 <code class="notranslate">0</code>。</p>
+<h3>2.2 Hamming Weight（汉明重量）</h3>
+<p>汉明重量指二进制表示中 <strong><code class="notranslate">1</code> 的数量</strong>。例如：</p>
+<p>$$
+\mathrm{HW}(00000101)=2
+$$</p>
+<p>$$
+\mathrm{HW}(11111011)=7
+$$</p>
+<p>实际硬件功耗可能与汉明重量、比特翻转等数据相关特征有关。因此，假如某个实现泄露了足够明显的汉明重量差异，就有可能间接泄露随机数的正负号。</p>
+<p><strong>但汉明重量并不等于功耗</strong>；能否利用这种差异，取决于具体硬件、代码实现与测量条件。</p>
+<h3>2.3 论文中的 HAWK 例子</h3>
+<p>论文 Section 4.1 指出，在所讨论的 HAWK 参考实现中，随机数坐标在实践中满足 $|x_i|\le 9$，并以 8 位补码表示。在这个特定范围内：</p>
+<ul>
+<li>当 $0\le x_i\le 9$，汉明重量<strong>至多为 3</strong>；</li>
+<li>当 $-9\le x_i&amp;lt;0$，汉明重量<strong>至少为 5</strong>。</li>
+</ul>
+<p>这形成了可用于区分符号的汉明重量间隙（Hamming Weight Gap）。</p>
+<p>此外，8 位补码的最高位本身也携带符号信息。论文的重点是：<strong>有时只要观察到一个高位，或者能够估计汉明重量，就足以推断符号。</strong></p>
+<p><strong>理解边界：</strong> 这种汉明重量差异依赖具体的整数范围和存储位数，不能推广成“所有正数的汉明重量都比所有负数小”。</p>
+<blockquote>
+<p>对应原文：Section 2 <strong>Preliminaries</strong>；Section 4.1 <strong>Sign and Symbreak Leakage</strong>。</p>
+</blockquote>
+<hr>
+<h2>3. Learning a Halfspace：如何从正负标签学习秘密向量？</h2>
+<p><strong>核心问题：如果攻击者只知道内积的正负，为什么仍可能推断秘密方向？</strong></p>
+<h3>3.1 LH 样本的基本形式</h3>
+<p>设秘密向量为 $b\in\mathbb{R}^n$，已知样本向量为 $w\in\mathbb{R}^n$。理想的无噪声标签是：</p>
+<p>$$
+y=\mathrm{sign}(\langle b,w\rangle)
+$$</p>
+<p>其中 $\langle b,w\rangle$ 表示内积。</p>
+<p>一个 LH 样本为：</p>
+<p>$$
+(w,y),\qquad y\in-1,+1.
+$$</p>
+<blockquote>
+<p>样本向量 (w) 就是攻击者用来“测试”秘密向量方向的已知向量，而符号标签 (y) 告诉攻击者，这次内积的结果是正还是负。<br>
+可以把 (w) 理解为机器学习中的输入特征（Features），把 (y) 理解为分类标签（Label），而秘密向量 (b) 就是需要学习的模型参数。</p>
+</blockquote>
+<p>攻击者观察到一批 $(w_i,y_i)$，希望反推出隐藏的 $b$。在密码学应用中， $b$ 通常是具有已知采样分布的整数秘密向量；论文后续会解释如何从签名构造这些样本。</p>
+<h3>3.2 二维几何例子</h3>
+<p>假设真实秘密向量是：</p>
+<p>$$
+b=(1,-1).
+$$</p>
+<p>对于任意样本 $w=(w_1,w_2)$：</p>
+<p>$$
+\langle b,w\rangle=w_1-w_2.
+$$</p>
+<p>因此：</p>
+<ul>
+<li>
+$w_1\ge w_2$ 时，标签为 $+1$；</li>
+<li>
+$w_1&amp;lt;w_2$ 时，标签为 $-1$。</li>
+</ul>
+<p>例如：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>样本 $w$
+</th>
+<th align="right">内积 $\langle b,w\rangle$
+</th>
+<th align="center">标签</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>$(2,1)$</td>
+<td align="right">$2-1=1$</td>
+<td align="center">$+1$</td>
+</tr>
+<tr>
+<td>$(1,2)$</td>
+<td align="right">$1-2=-1$</td>
+<td align="center">$-1$</td>
+</tr>
+<tr>
+<td>$(2,4)$</td>
+<td align="right">$2-4=-2$</td>
+<td align="center">$-1$</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>对应的分类边界是：</p>
+<p>$$
+\langle b,w\rangle=0
+\quad\Longleftrightarrow\quad w_1=w_2.
+$$</p>
+<p>在二维空间中，这是一条直线；更高维时则是<strong>超平面（Hyperplane）</strong>。秘密向量 $b$ <strong>垂直于分类边界</strong>。</p>
+<p>每个标签都限制了秘密向量可能的方向。随着样本增多，学习算法可以逐渐找到与大多数标签一致的分类边界。</p>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/880dace5-c8ac-4c8f-9dc6-050531fd8942"><img width="1280" height="780" alt="Image" src="https://github.com/user-attachments/assets/880dace5-c8ac-4c8f-9dc6-050531fd8942" style="max-width: 100%; height: auto; max-height: 780px;; aspect-ratio: 1280 / 780; background-color: var(--bgColor-muted); border-radius: 6px" class="js-gh-image-fallback"></a></p>
+<h3>3.3 Scale Invariance（尺度不变性）</h3>
+<p>符号信息有一个基本限制：对任意正数 $c&amp;gt;0$，</p>
+<p>$$
+\mathrm{sign}(\langle b,w\rangle)=
+\mathrm{sign}(\langle cb,w\rangle).
+$$</p>
+<p>例如 $b=(1,-1)$ 和 $3b=(3,-3)$ 产生完全相同的符号标签。</p>
+<p>所以，<strong>仅凭 LH 符号标签通常只能确定秘密向量的方向，不能确定长度</strong>。论文 Section 3.2 利用秘密密钥的已知分布估计尺度，再尝试恢复整数坐标。</p>
+<blockquote>
+<p>对应原文：Introduction 的 <strong>Learning a Halfspace, Noisefree</strong>；Section 3 的 <strong>Definition 1</strong>、<strong>Figure 2</strong>、<strong>Scale Invariance</strong>。</p>
+</blockquote>
+<hr>
+<h2>4. Classification Noise：部分标签错误，为什么仍有学习价值？</h2>
+<p><strong>核心问题：实际测量不能保证百分之百准确，算法还能找到秘密方向吗？</strong></p>
+<h3>4.1 随机标签翻转模型</h3>
+<p>功耗测量可能把正号误判为负号，或把负号误判为正号。论文用分类噪声率 $\rho$ 描述这种情况：</p>
+<p>$$
+y_i=
+\begin{cases}
+\mathrm{sign}(\langle b,w_i\rangle), &amp; \text{概率 }1-\rho,\\
+-\mathrm{sign}(\langle b,w_i\rangle), &amp; \text{概率 }\rho.
+\end{cases}
+$$</p>
+<p>也可写成：</p>
+<p>$$
+y_i=(-1)^{c_i}\mathrm{sign}(\langle b,w_i\rangle),
+\qquad c_i\sim\mathrm{Ber}(\rho).
+$$</p>
+<p>这里 $c_i=1$ 表示标签翻转， $c_i=0$ 表示未翻转。论文考虑的分类噪声模型为 $0\le\rho&amp;lt;0.5$。</p>
+<p>例如 $\rho=0.2$ 时：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>结果</th>
+<th align="right">概率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>标签正确</td>
+<td align="right">80%</td>
+</tr>
+<tr>
+<td>标签翻转</td>
+<td align="right">20%</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<h3>4.2 为什么 $\rho&amp;lt;0.5$ 很重要？</h3>
+<p>在该模型下，对于一个固定的样本 $w$，<strong>真实标签比反向标签更可能出现</strong>：</p>
+<p>$$
+1-\rho&gt;\rho.
+$$</p>
+<p>因此，从总体统计意义上看，遵循真实分类方向的分类器仍具有优势。论文 Theorem 3 进一步说明了：<strong>为什么最小化期望 0–1 分类损失能够恢复秘密向量的方向。</strong></p>
+<p>其核心直觉是：假设随机标签翻转率为 $\rho=0.2$，那么对于任意给定的样本，真实分类方向给出正确观察标签的概率为 80%，错误标签的概率为 20%。</p>
+<p>如果某个候选分类器在部分区域与真实方向产生分歧，那么它在这些区域的错误概率就会从 20% 上升到 80%。因此，<strong>偏离真实方向通常会增加期望分类损失</strong>。</p>
+<p>这里需要区分两个结论：</p>
+<ol>
+<li>
+<strong>理论上的总体最优方向：</strong> 当 $\rho&amp;lt;0.5$ 且标签满足随机翻转模型时，真实分类规则能够最小化期望 0–1 损失。在样本分布具有充分支持集的条件下，秘密向量的方向还具有唯一性（不考虑正比例缩放）。</li>
+<li>
+<strong>有限样本的实际密钥恢复：</strong> 攻击者只能收集有限数量的 LH 样本，因此恢复效果还受到样本数量、测量误差和优化算法等因素影响，不能仅凭 $\rho&amp;lt;0.5$ 就保证成功。</li>
+</ol>
+<p><strong>进一步区分：</strong> 论文在 Falcon 的 LH 构造中还会主动引入近似误差。这类误差来自数学模型的简化，而硬件测量误差来自侧信道观测，两者可能表现为符号标签错误，但来源和统计性质不一定相同，不能直接视为同一种随机噪声。</p>
+<blockquote>
+<p>对应原文：Section 3 <strong>Definition 1</strong>、<strong>Figure 2</strong>、<strong>Theorem 3</strong>；Introduction 的 <strong>Solving LH, Noise-free and Noisy</strong>。</p>
+</blockquote>
+<hr>
+<h2>5. Linear Programming 与 Logistic Regression：硬约束与软损失</h2>
+<p><strong>核心问题：为什么无噪声时适合用 LP，出现错误标签后 LR 更有优势？</strong></p>
+<h3>5.1 Linear Programming（线性规划，LP）</h3>
+<p>在理想的无噪声情况下，已知标签应满足：</p>
+<p>$$
+\begin{cases}
+\langle u,w_i\rangle\ge0, &amp; y_i=+1,\\
+\langle u,w_i\rangle&lt;0, &amp; y_i=-1.
+\end{cases}
+$$</p>
+<p>这里 $u$ 是需要寻找的候选秘密方向。论文将其视为线性不等式的可行性问题。</p>
+<p>但如果同一个 $w=(1,0)$ 同时出现 $+1$ 与 $-1$ 两种标签，就要求 $u_1\ge0$ 和 $u_1&amp;lt;0$ 同时成立，显然不可能。</p>
+<p>因此，<strong>要求所有标签都严格一致的硬约束方法，可能因标签错误而无可行解</strong>。这并不意味着所有线性规划模型都不能处理噪声，而是论文比较的这种无噪声约束形式无法直接容忍冲突标签。</p>
+<h3>5.2 Logistic Regression（逻辑回归，LR）</h3>
+<p>LR 不要求每个训练样本都被正确分类，而是寻找<strong>整体损失较小</strong>的方向。</p>
+<p>常用的 Logistic Loss 为：</p>
+<p>$$
+\ell_{\mathrm{log}}(u,w_i,y_i)
+=\ln!\left(1+e^{-y_i\langle u,w_i\rangle}\right).
+$$</p>
+<blockquote>
+<p>论文 Equation (4) 采用了一个 $1/\ln 2$ 的常数归一化；它不改变损失函数的最小化位置。</p>
+</blockquote>
+<p>可以用一个量帮助理解：</p>
+<p>$$
+M_i=y_i\langle u,w_i\rangle,
+$$</p>
+<p>其中 $M_i$ 是分类间隔（margin）：</p>
+<ul>
+<li>
+$M_i&amp;gt;0$：分类正确，间隔越大，Logistic Loss 越小；</li>
+<li>
+$M_i&amp;lt;0$：分类错误，错误程度越大，Logistic Loss 越大。</li>
+</ul>
+<p>LR 的训练目标（省略常数归一化）可写为：</p>
+<p>$$
+\min_u\ \sum_{i=1}^{m}
+\ln!\left(1+e^{-y_i\langle u,w_i\rangle}\right).
+$$</p>
+<p>假设 4 个相同输入的标签为 <code class="notranslate">+1, +1, +1, -1</code>。硬约束无法同时满足它们，LR 则可以在这些相互矛盾的标签之间权衡整体损失。</p>
+<p><strong>允许错误 ≠ 自动修复错误。</strong> LR 并不知道哪些标签一定错，也不能保证在任意有限样本、任意噪声条件下恢复正确密钥。</p>
+<h3>5.3 两种方法如何选择？</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>对比维度</th>
+<th>LP（论文的无噪声形式）</th>
+<th>LR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基本思路</td>
+<td>满足所有符号约束</td>
+<td>优化整体损失</td>
+</tr>
+<tr>
+<td>标签冲突</td>
+<td>可能造成无解</td>
+<td>能进行折中优化</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>无噪声 LH</td>
+<td>含噪声 LH</td>
+</tr>
+<tr>
+<td>理论局限</td>
+<td>依赖约束一致性</td>
+<td>不保证有限样本精确恢复</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>作者在实验中比较了 hinge loss、squared loss 和 logistic loss，最终侧重使用 LR：它在所研究的高维问题中具有较好的计算效率和噪声容忍能力。</p>
+<blockquote>
+<p>对应原文：Section 3.1 <strong>Secret Key Recovery – Direction</strong>、<strong>Theorem 3</strong>、<strong>Surrogate Loss Functions</strong>、<strong>Logistic Regression</strong>、<strong>Algorithm 1</strong>。</p>
+</blockquote>
+<hr>
+<h2>6. 把五个知识点连接到论文的密钥恢复问题</h2>
+<p>现在，我们可以理解整条链条中的每一步：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>阶段</th>
+<th>已有信息</th>
+<th>需要解决的问题</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>符号获取</td>
+<td>侧信道功耗信息</td>
+<td>能否推断随机数正负？</td>
+</tr>
+<tr>
+<td>LH 建模</td>
+<td>已知向量 $w$ 和符号标签 $y$
+</td>
+<td>是否满足 $y=\mathrm{sign}(\langle b,w\rangle)$？</td>
+</tr>
+<tr>
+<td>分类学习</td>
+<td>大量 LH 样本</td>
+<td>能否找到秘密向量方向？</td>
+</tr>
+<tr>
+<td>噪声处理</td>
+<td>可能被翻转的标签</td>
+<td>如何在错误存在时继续学习？</td>
+</tr>
+<tr>
+<td>密钥重建</td>
+<td>近似方向、已知密钥分布</td>
+<td>如何估计尺度并恢复整数密钥？</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<h3>HAWK 的一眼预览</h3>
+<p>论文 Introduction 给出了一个非常直观的例子：在其 HAWK 记号下，签名中的公开量可形成</p>
+<p>$$
+w=h-2s,
+$$</p>
+<p>而秘密基矩阵 $B$ 与随机向量 $x$ 满足</p>
+<p>$$
+Bw=x.
+$$</p>
+<p>取 $B$ 的第 $i$ 行 $b_i$，就有</p>
+<p>$$
+x_i=\langle b_i,w\rangle.
+$$</p>
+<p>若攻击者额外得到 $x_i$ 的符号，就得到一个 LH 样本：</p>
+<p>$$
+\left(w,\mathrm{sign}(x_i)\right).
+$$</p>
+<p>这解释了为什么<strong>符号泄漏可以与一个公开可计算的向量结合，形成关于秘密密钥的训练数据</strong>。具体如何利用 HAWK 的环结构把多个样本统一到同一个秘密向量，以及如何处理 Symbreak，将在原文 Section 4 中进一步研究。</p>
+<h3>论文中的实验数字需要怎样理解？</h3>
+<p>论文报告在<strong>128 位安全级别、额外符号泄漏无噪声</strong>的实验设置下：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>方案</th>
+<th align="right">论文报告的签名数量</th>
+<th>求解方法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HAWK</td>
+<td align="right">30</td>
+<td>LP</td>
+</tr>
+<tr>
+<td>Falcon</td>
+<td align="right">100</td>
+<td>LR</td>
+</tr>
+<tr>
+<td>ML-DSA</td>
+<td align="right">190,000</td>
+<td>LR</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>此外，作者针对 HAWK 的未保护参考实现，使用实际功耗轨迹完成了 <strong>1,600 次签名</strong>的端到端密钥恢复实验。</p>
+<p>上述数字是<strong>论文报告的特定实验结果</strong>，不是所有设备、所有参数集或所有噪声情况下的通用要求；第零轮也尚未复现这些实验。</p>
+<hr>
+<h2>7. 第零轮自检与第一轮阅读衔接</h2>
+<p>读完这份笔记后，至少应能回答下面 5 个问题：</p>
+<ol>
+<li>为什么公开签名安全不意味着实现没有侧信道泄漏？</li>
+<li>为什么较小负数的 8 位补码可能具有更大的汉明重量？</li>
+<li>为什么 LH 可以确定秘密方向，却不能只靠符号确定长度？</li>
+<li>随机分类噪声率 $\rho&amp;lt;0.5$ 说明了什么，又<strong>不能</strong>保证什么？</li>
+<li>为什么含噪声的 LH 问题通常比无噪声问题更适合采用损失函数优化？</li>
+</ol>
+<h3>第一轮需要重点关注的原文</h3>
+<ul>
+<li><strong>Section 3 / Definition 1</strong>：LH 的严格定义与概率模型；</li>
+<li><strong>Section 3.1 / Theorem 3</strong>：噪声条件下最优分类方向的论证；</li>
+<li><strong>Section 3.1 / Algorithm 1</strong>：LP 与 LR 的具体求解流程；</li>
+<li><strong>Section 3.2 / Lemma 5</strong>：由密钥分布推断尺度；</li>
+<li><strong>Section 5</strong>：Falcon 如何构造 LH 样本，以及降维引入的噪声。</li>
+</ul>
+<h3>最后一句话</h3>
+<blockquote>
+<p><strong>这篇论文的关键不是“机器学习凭空猜出密钥”，而是把实现泄露的正负信息转化为有数学结构的监督学习样本，再利用学习算法与密码方案结构完成密钥重建。</strong></p>
+</blockquote>
+<hr>
+<h2>参考资料</h2>
+<ol>
+<li>Brinkmann, M., Kraus, N., &amp; May, A. (2026). <em>Halfspace Learning for Lattice Signature Key Recovery from Signs</em>. CRYPTO 2026, LNCS 16802, pp. 359–390. <a href="https://doi.org/10.1007/978-3-032-35377-1_12" rel="nofollow">DOI</a>.</li>
+<li>论文 Section 2：Preliminaries（补码与符号函数）。</li>
+<li>论文 Section 3：Learning a Halfspace（Definition 1、Theorem 3、Algorithm 1、Lemma 5）。</li>
+<li>论文 Section 4.1：Sign and Symbreak Leakage（HAWK 的符号与汉明重量泄漏）。</li>
+</ol>
+<p><em>注：本文是学习笔记。二维例子、补码示例和部分直观解释为帮助理解所做的教学整理；定理、算法与实验结论以原论文为准。</em></p></div>
+<div style="font-size:small;margin-top:8px;float:right;"></div>
+
+<button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>
+<div class="comments" id="comments"></div>
+
+</div>
+    <div id="footer"><div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="https://starry-juniper.github.io">Blog Title</a></div>
+<div id="footer2">
+    <span id="runday"></span><span>Powered by <a href="https://meekdai.com/Gmeek.html" target="_blank">Gmeek</a></span>
+</div>
+
+<script>
+var now=new Date();
+document.getElementById("copyrightYear").innerHTML=now.getFullYear();
+
+if(""!=""){
+    var startSite=new Date("");
+    var diff=now.getTime()-startSite.getTime();
+    var diffDay=Math.floor(diff/(1000*60*60*24));
+    document.getElementById("runday").innerHTML="网站运行 "+diffDay+" 天"+" • ";
+}
+</script></div>
+</body>
+<script>
+var IconList={'sun': 'M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.343 2.343a.75.75 0 011.061 0l1.06 1.061a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zm9.193 9.193a.75.75 0 011.06 0l1.061 1.06a.75.75 0 01-1.06 1.061l-1.061-1.06a.75.75 0 010-1.061zM16 8a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0116 8zM3 8a.75.75 0 01-.75.75H.75a.75.75 0 010-1.5h1.5A.75.75 0 013 8zm10.657-5.657a.75.75 0 010 1.061l-1.061 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm-9.193 9.193a.75.75 0 010 1.06l-1.06 1.061a.75.75 0 11-1.061-1.06l1.06-1.061a.75.75 0 011.061 0z', 'moon': 'M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zm1.616 1.945a7 7 0 01-7.678 7.678 5.5 5.5 0 107.678-7.678z', 'sync': 'M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z', 'home': 'M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z', 'github': 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'};
+var utterancesLoad=0;
+
+let themeSettings={
+    "dark": ["dark","moon","#00f0ff","dark-blue"],
+    "light": ["light","sun","#ff5000","github-light"],
+    "auto": ["auto","sync","","preferred-color-scheme"]
+};
+function changeTheme(mode, icon, color, utheme){
+    document.documentElement.setAttribute("data-color-mode",mode);
+    document.getElementById("themeSwitch").setAttribute("d",value=IconList[icon]);
+    document.getElementById("themeSwitch").parentNode.style.color=color;
+    if(utterancesLoad==1){utterancesTheme(utheme);}
+}
+function modeSwitch(){
+    let currentMode=document.documentElement.getAttribute('data-color-mode');
+    let newMode = currentMode === "light" ? "dark" : currentMode === "dark" ? "auto" : "light";
+    localStorage.setItem("meek_theme", newMode);
+    if(themeSettings[newMode]){
+        changeTheme(...themeSettings[newMode]);
+    }
+}
+function utterancesTheme(theme){
+    const message={type:'set-theme',theme: theme};
+    const iframe=document.getElementsByClassName('utterances-frame')[0];
+    iframe.contentWindow.postMessage(message,'https://utteranc.es');
+}
+if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
+console.log("\n %c Gmeek last https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+
+<script>
+document.getElementById("pathHome").setAttribute("d",IconList["home"]);
+document.getElementById("pathIssue").setAttribute("d",IconList["github"]);
+
+
+
+function openComments(){
+    cm=document.getElementById("comments");
+    cmButton=document.getElementById("cmButton");
+    cmButton.disabled=true;
+    cmButton.innerHTML="loading";
+    span=document.createElement("span");
+    span.setAttribute("class","AnimatedEllipsis");
+    cmButton.appendChild(span);
+
+    script=document.createElement("script");
+    script.setAttribute("src","https://utteranc.es/client.js");
+    script.setAttribute("repo","starry-juniper/starry-juniper.github.io");
+    script.setAttribute("issue-term","title");
+    
+    if(localStorage.getItem("meek_theme")=="dark"){script.setAttribute("theme","dark-blue");}
+    else if(localStorage.getItem("meek_theme")=="light") {script.setAttribute("theme","github-light");}
+    else{script.setAttribute("theme","preferred-color-scheme");}
+    
+    script.setAttribute("crossorigin","anonymous");
+    script.setAttribute("async","");
+    cm.appendChild(script);
+
+    int=self.setInterval("iFrameLoading()",200);
+}
+
+function iFrameLoading(){
+    var utterances=document.getElementsByClassName('utterances');
+    if(utterances.length==1){
+        if(utterances[0].style.height!=""){
+            utterancesLoad=1;
+            int=window.clearInterval(int);
+            document.getElementById("cmButton").style.display="none";
+            console.log("utterances Load OK");
+        }
+    }
+}
+
+
+
+</script>
+<script>MathJax = {tex: {inlineMath: [["$", "$"]]}};</script><script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+</html>

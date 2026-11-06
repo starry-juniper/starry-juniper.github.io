@@ -108,13 +108,13 @@ body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;
 <li><strong>缓存行为（Cache Behavior）</strong>：存储访问模式可能与秘密数据相关。</li>
 </ul>
 <p>这些并不是密码算法设计上应当公开的输出，却可能成为攻击者推断内部状态的线索。</p>
-<p>以签名随机数 $x$ 为例，攻击者未必知道 $x$ 的准确数值，但如果设备处理 $x&amp;gt;0$ 和 $x&amp;lt;0$ 时呈现可区分的功耗特征，攻击者就<strong>可能</strong>推断出其符号。</p>
+<p>以签名随机数 $x$ 为例，攻击者未必知道 $x$ 的准确数值，但如果设备处理 $x\gt0$ 和 $x\lt0$ 时呈现可区分的功耗特征，攻击者就<strong>可能</strong>推断出其符号。</p>
 <p>论文使用的符号函数定义为：</p>
 <p>$$
 \mathrm{sign}(x)=
 \begin{cases}
 +1, &amp; x\ge 0,\\
--1, &amp; x&lt;0.
+-1, &amp; x\lt0.
 \end{cases}
 $$</p>
 <p>注意，论文把 <strong>$x=0$ 也归为标签 $+1$</strong>。</p>
@@ -131,7 +131,7 @@ $$</p>
 <strong>正数或零：</strong> $\langle b,w\rangle\geq0$
 </li>
 <li>
-<strong>负数：</strong> $\langle b,w\rangle&amp;lt;0$
+<strong>负数：</strong> $\langle b,w\rangle\lt0$
 </li>
 </ul>
 <p>虽然无法直接求出 $b$，但每个符号都为秘密向量增加了一条约束条件。</p>
@@ -197,7 +197,7 @@ $$</p>
 <p>论文 Section 4.1 指出，在所讨论的 HAWK 参考实现中，随机数坐标在实践中满足 $|x_i|\le 9$，并以 8 位补码表示。在这个特定范围内：</p>
 <ul>
 <li>当 $0\le x_i\le 9$，汉明重量<strong>至多为 3</strong>；</li>
-<li>当 $-9\le x_i&amp;lt;0$，汉明重量<strong>至少为 5</strong>。</li>
+<li>当 $-9\le x_i\lt0$，汉明重量<strong>至少为 5</strong>。</li>
 </ul>
 <p>这形成了可用于区分符号的汉明重量间隙（Hamming Weight Gap）。</p>
 <p>此外，8 位补码的最高位本身也携带符号信息。论文的重点是：<strong>有时只要观察到一个高位，或者能够估计汉明重量，就足以推断符号。</strong></p>
@@ -237,7 +237,7 @@ $$</p>
 <li>
 $w_1\ge w_2$ 时，标签为 $+1$；</li>
 <li>
-$w_1&amp;lt;w_2$ 时，标签为 $-1$。</li>
+$w_1\ltw_2$ 时，标签为 $-1$。</li>
 </ul>
 <p>例如：</p>
 <markdown-accessiblity-table><table role="table">
@@ -277,7 +277,7 @@ $$</p>
 <p>每个标签都限制了秘密向量可能的方向。随着样本增多，学习算法可以逐渐找到与大多数标签一致的分类边界。</p>
 <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/user-attachments/assets/880dace5-c8ac-4c8f-9dc6-050531fd8942"><img width="1280" height="780" alt="Image" src="https://github.com/user-attachments/assets/880dace5-c8ac-4c8f-9dc6-050531fd8942" style="max-width: 100%; height: auto; max-height: 780px;; aspect-ratio: 1280 / 780; background-color: var(--bgColor-muted); border-radius: 6px" class="js-gh-image-fallback"></a></p>
 <h3>3.3 Scale Invariance（尺度不变性）</h3>
-<p>符号信息有一个基本限制：对任意正数 $c&amp;gt;0$，</p>
+<p>符号信息有一个基本限制：对任意正数 $c\gt0$，</p>
 <p>$$
 \mathrm{sign}(\langle b,w\rangle)=
 \mathrm{sign}(\langle cb,w\rangle).
@@ -304,7 +304,7 @@ $$</p>
 y_i=(-1)^{c_i}\mathrm{sign}(\langle b,w_i\rangle),
 \qquad c_i\sim\mathrm{Ber}(\rho).
 $$</p>
-<p>这里 $c_i=1$ 表示标签翻转， $c_i=0$ 表示未翻转。论文考虑的分类噪声模型为 $0\le\rho&amp;lt;0.5$。</p>
+<p>这里 $c_i=1$ 表示标签翻转， $c_i=0$ 表示未翻转。论文考虑的分类噪声模型为 $0\le\rho\lt0.5$。</p>
 <p>例如 $\rho=0.2$ 时：</p>
 <markdown-accessiblity-table><table role="table">
 <thead>
@@ -324,10 +324,10 @@ $$</p>
 </tr>
 </tbody>
 </table></markdown-accessiblity-table>
-<h3>4.2 为什么 $\rho&amp;lt;0.5$ 很重要？</h3>
+<h3>4.2 为什么 $\rho\lt0.5$ 很重要？</h3>
 <p>在该模型下，对于一个固定的样本 $w$，<strong>真实标签比反向标签更可能出现</strong>：</p>
 <p>$$
-1-\rho&gt;\rho.
+1-\rho\gt\rho.
 $$</p>
 <p>因此，从总体统计意义上看，遵循真实分类方向的分类器仍具有优势。论文 Theorem 3 进一步说明了：<strong>为什么最小化期望 0–1 分类损失能够恢复秘密向量的方向。</strong></p>
 <p>其核心直觉是：假设随机标签翻转率为 $\rho=0.2$，那么对于任意给定的样本，真实分类方向给出正确观察标签的概率为 80%，错误标签的概率为 20%。</p>
@@ -335,9 +335,9 @@ $$</p>
 <p>这里需要区分两个结论：</p>
 <ol>
 <li>
-<strong>理论上的总体最优方向：</strong> 当 $\rho&amp;lt;0.5$ 且标签满足随机翻转模型时，真实分类规则能够最小化期望 0–1 损失。在样本分布具有充分支持集的条件下，秘密向量的方向还具有唯一性（不考虑正比例缩放）。</li>
+<strong>理论上的总体最优方向：</strong> 当 $\rho\lt0.5$ 且标签满足随机翻转模型时，真实分类规则能够最小化期望 0–1 损失。在样本分布具有充分支持集的条件下，秘密向量的方向还具有唯一性（不考虑正比例缩放）。</li>
 <li>
-<strong>有限样本的实际密钥恢复：</strong> 攻击者只能收集有限数量的 LH 样本，因此恢复效果还受到样本数量、测量误差和优化算法等因素影响，不能仅凭 $\rho&amp;lt;0.5$ 就保证成功。</li>
+<strong>有限样本的实际密钥恢复：</strong> 攻击者只能收集有限数量的 LH 样本，因此恢复效果还受到样本数量、测量误差和优化算法等因素影响，不能仅凭 $\rho\lt0.5$ 就保证成功。</li>
 </ol>
 <p><strong>进一步区分：</strong> 论文在 Falcon 的 LH 构造中还会主动引入近似误差。这类误差来自数学模型的简化，而硬件测量误差来自侧信道观测，两者可能表现为符号标签错误，但来源和统计性质不一定相同，不能直接视为同一种随机噪声。</p>
 <blockquote>
@@ -351,11 +351,11 @@ $$</p>
 <p>$$
 \begin{cases}
 \langle u,w_i\rangle\ge0, &amp; y_i=+1,\\
-\langle u,w_i\rangle&lt;0, &amp; y_i=-1.
+\langle u,w_i\rangle\lt0, &amp; y_i=-1.
 \end{cases}
 $$</p>
 <p>这里 $u$ 是需要寻找的候选秘密方向。论文将其视为线性不等式的可行性问题。</p>
-<p>但如果同一个 $w=(1,0)$ 同时出现 $+1$ 与 $-1$ 两种标签，就要求 $u_1\ge0$ 和 $u_1&amp;lt;0$ 同时成立，显然不可能。</p>
+<p>但如果同一个 $w=(1,0)$ 同时出现 $+1$ 与 $-1$ 两种标签，就要求 $u_1\ge0$ 和 $u_1\lt0$ 同时成立，显然不可能。</p>
 <p>因此，<strong>要求所有标签都严格一致的硬约束方法，可能因标签错误而无可行解</strong>。这并不意味着所有线性规划模型都不能处理噪声，而是论文比较的这种无噪声约束形式无法直接容忍冲突标签。</p>
 <h3>5.2 Logistic Regression（逻辑回归，LR）</h3>
 <p>LR 不要求每个训练样本都被正确分类，而是寻找<strong>整体损失较小</strong>的方向。</p>
@@ -374,9 +374,9 @@ $$</p>
 <p>其中 $M_i$ 是分类间隔（margin）：</p>
 <ul>
 <li>
-$M_i&amp;gt;0$：分类正确，间隔越大，Logistic Loss 越小；</li>
+$M_i\gt0$：分类正确，间隔越大，Logistic Loss 越小；</li>
 <li>
-$M_i&amp;lt;0$：分类错误，错误程度越大，Logistic Loss 越大。</li>
+$M_i\lt0$：分类错误，错误程度越大，Logistic Loss 越大。</li>
 </ul>
 <p>LR 的训练目标（省略常数归一化）可写为：</p>
 <p>$$
@@ -516,7 +516,7 @@ $$</p>
 <li>为什么公开签名安全不意味着实现没有侧信道泄漏？</li>
 <li>为什么较小负数的 8 位补码可能具有更大的汉明重量？</li>
 <li>为什么 LH 可以确定秘密方向，却不能只靠符号确定长度？</li>
-<li>随机分类噪声率 $\rho&amp;lt;0.5$ 说明了什么，又<strong>不能</strong>保证什么？</li>
+<li>随机分类噪声率 $\rho\lt0.5$ 说明了什么，又<strong>不能</strong>保证什么？</li>
 <li>为什么含噪声的 LH 问题通常比无噪声问题更适合采用损失函数优化？</li>
 </ol>
 <h3>第一轮需要重点关注的原文</h3>

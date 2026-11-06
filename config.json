@@ -1,4 +1,6 @@
 {
+    
+"indexStyle": "<style>.SideNav-item{flex-wrap:wrap}.SideNav-item>.d-flex{flex:1 1 100%;min-width:0}.listTitle{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.listLabels{margin-left:32px;flex-wrap:wrap;white-space:normal}</style>"
     "title":"Blog Title",
     "subTitle":"Blog description",
     "avatarUrl":"https://github.githubassets.com/favicons/favicon.svg",

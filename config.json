@@ -1,8 +1,8 @@
 {
-    "indexStyle": "<style>.SideNav-item{flex-wrap:wrap}.SideNav-item>.d-flex{flex:1 1 100%;min-width:0}.listTitle{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.listLabels{margin-left:32px;flex-wrap:wrap;white-space:normal}</style>"
+    "indexStyle": "<style>.SideNav-item{flex-wrap:wrap}.SideNav-item>.d-flex{flex:1 1 100%;min-width:0}.listTitle{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.listLabels{margin-left:32px;flex-wrap:wrap;white-space:normal}</style>",
     "title":"Starry Juniper | Research Notes",
     "subTitle":"记录密码学、后量子安全与机器学习交叉领域的文献阅读、数学推导和科研探索。",
     "avatarUrl": "https://starry-juniper.github.io/avatar.png",
-    "faviconUrl": "https://starry-juniper.github.io/avatar.png"
+    "faviconUrl": "https://starry-juniper.github.io/avatar.png",
     "GMEEK_VERSION":"last"
 }

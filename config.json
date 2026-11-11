@@ -1,6 +1,6 @@
 {
     
-    "allHead": "<style>#taglabel~.SideNav .SideNav-item{flex-wrap:wrap!important;}#taglabel~.SideNav .SideNav-item>.d-flex{flex:1 1 100%;min-width:0;}#taglabel~.SideNav .listTitle{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;flex:1;min-width:0;}#taglabel~.SideNav .listLabels{display:flex;flex-wrap:wrap;white-space:normal!important;margin:6px 0 0 32px;gap:4px;}#taglabel~.SideNav .listLabels .Label{margin-left:0;}</style>"，
+    "allHead": "<style>#taglabel~.SideNav .SideNav-item{flex-wrap:wrap!important;}#taglabel~.SideNav .SideNav-item>.d-flex{flex:1 1 100%;min-width:0;}#taglabel~.SideNav .listTitle{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;flex:1;min-width:0;}#taglabel~.SideNav .listLabels{display:flex;flex-wrap:wrap;white-space:normal!important;margin:6px 0 0 32px;gap:4px;}#taglabel~.SideNav .listLabels .Label{margin-left:0;}</style>",
     "indexStyle": "<style>.SideNav-item{flex-wrap:wrap}.SideNav-item>.d-flex{flex:1 1 100%;min-width:0}.listTitle{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.listLabels{margin-left:32px;flex-wrap:wrap;white-space:normal}</style>",
     "title":"Starry Juniper | Research Notes",
     "subTitle":"记录密码学、后量子安全与机器学习交叉领域的文献阅读、数学推导和科研探索。",

@@ -1,10 +1,9 @@
+
 {
-    
-    "allHead": "<style>#taglabel~.SideNav .SideNav-item{flex-wrap:wrap!important;}#taglabel~.SideNav .SideNav-item>.d-flex{flex:1 1 100%;min-width:0;}#taglabel~.SideNav .listTitle{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere;flex:1;min-width:0;}#taglabel~.SideNav .listLabels{display:flex;flex-wrap:wrap;white-space:normal!important;margin:6px 0 0 32px;gap:4px;}#taglabel~.SideNav .listLabels .Label{margin-left:0;}</style>",
-    "indexStyle": "<style>.SideNav-item{flex-wrap:wrap}.SideNav-item>.d-flex{flex:1 1 100%;min-width:0}.listTitle{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}.listLabels{margin-left:32px;flex-wrap:wrap;white-space:normal}</style>",
-    "title":"Starry Juniper | Research Notes",
-    "subTitle":"记录密码学、后量子安全与机器学习交叉领域的文献阅读、数学推导和科研探索。",
-    "avatarUrl": "https://starry-juniper.github.io/avatar.png",
-    "faviconUrl": "https://starry-juniper.github.io/avatar.png",
-    "GMEEK_VERSION":"last"
+  "title": "Starry Juniper | Research Notes",
+  "subTitle": "记录密码学、后量子安全与机器学习交叉领域的文献阅读、数学推导和科研探索。",
+  "avatarUrl": "https://starry-juniper.github.io/avatar.png",
+  "faviconUrl": "https://starry-juniper.github.io/avatar.png",
+  "GMEEK_VERSION": "last",
+  "allHead": "<style>.SideNav .SideNav-item{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;}.SideNav .SideNav-item>.d-flex{display:flex!important;width:100%!important;min-width:0!important;align-items:flex-start!important;}.SideNav .listTitle{display:block!important;flex:1 1 auto!important;min-width:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important;}.SideNav .listLabels{display:flex!important;flex-wrap:wrap!important;gap:4px!important;white-space:normal!important;margin:0 0 0 32px!important;}.SideNav .listLabels .Label{margin:0!important;}</style>"
 }

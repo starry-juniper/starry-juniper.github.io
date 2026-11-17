@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html data-color-mode="light" data-dark-theme="dark" data-light-theme="light" lang="zh-CN">
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link href='https://mirrors.sustech.edu.cn/cdnjs/ajax/libs/Primer/21.0.7/primer.css' rel='stylesheet' />
+    <style>.SideNav .SideNav-item{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:6px!important;}.SideNav .SideNav-item>.d-flex{display:flex!important;width:100%!important;min-width:0!important;align-items:flex-start!important;}.SideNav .listTitle{display:block!important;flex:1 1 auto!important;min-width:0!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;overflow-wrap:anywhere!important;}.SideNav .listLabels{display:flex!important;flex-wrap:wrap!important;gap:4px!important;white-space:normal!important;margin:0 0 0 32px!important;}.SideNav .listLabels .Label{margin:0!important;}</style>
+    <link rel="icon" href="https://starry-juniper.github.io/avatar.png"><script>
+        let theme = localStorage.getItem("meek_theme") || "light";
+        document.documentElement.setAttribute("data-color-mode", theme);
+    </script>
+<meta name="description" content="> **论文**：*Breaking Optimized HQC: The First Cache-Timing Full Decryption Oracle Key-Recovery Attack in Post-quantum Cryptography*  
+> **作者**：Haiyue Dong, Qian Guo  
+> **发表**：CRYPTO 2026（LNCS 16803，pp. 224–255）  
+> **标签**：`PQC` `HQC` `Side-Channel Attack` `Cache Timing` `Soft-ISD` `论文粗读`
+
+> **阅读定位**：本文是科研型粗读笔记，着重整理研究问题、攻击链条、实验结果、适用条件与后续研究启发；不涉及完整的汇编分析或 Soft-ISD 实现复现。">
+<meta property="og:title" content="《Breaking Optimized HQC》粗读：从编译器优化引入的侧信道泄露到完整私钥恢复">
+<meta property="og:description" content="> **论文**：*Breaking Optimized HQC: The First Cache-Timing Full Decryption Oracle Key-Recovery Attack in Post-quantum Cryptography*  
+> **作者**：Haiyue Dong, Qian Guo  
+> **发表**：CRYPTO 2026（LNCS 16803，pp. 224–255）  
+> **标签**：`PQC` `HQC` `Side-Channel Attack` `Cache Timing` `Soft-ISD` `论文粗读`
+
+> **阅读定位**：本文是科研型粗读笔记，着重整理研究问题、攻击链条、实验结果、适用条件与后续研究启发；不涉及完整的汇编分析或 Soft-ISD 实现复现。">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://starry-juniper.github.io/post/%E3%80%8ABreaking%20Optimized%20HQC%E3%80%8B-cu-du-%EF%BC%9A-cong-bian-yi-qi-you-hua-yin-ru-de-ce-xin-dao-xie-lu-dao-wan-zheng-si-yao-hui-fu.html">
+<meta property="og:image" content="https://starry-juniper.github.io/avatar.png">
+<title>《Breaking Optimized HQC》粗读：从编译器优化引入的侧信道泄露到完整私钥恢复</title>
+
+
+
+</head>
+<style>
+body{box-sizing: border-box;min-width: 200px;max-width: 900px;margin: 20px auto;padding: 45px;font-size: 16px;font-family: sans-serif;line-height: 1.25;}
+#header{display:flex;padding-bottom:8px;border-bottom: 1px solid var(--borderColor-muted, var(--color-border-muted));margin-bottom: 16px;}
+#footer {margin-top:64px; text-align: center;font-size: small;}
+
+</style>
+
+<style>
+.postTitle{margin: auto 0;font-size:40px;font-weight:bold;}
+.title-right{display:flex;margin:auto 0 0 auto;}
+.title-right .circle{padding: 14px 16px;margin-right:8px;}
+#postBody{border-bottom: 1px solid var(--color-border-default);padding-bottom:36px;}
+#postBody hr{height:2px;}
+#cmButton{height:48px;margin-top:48px;}
+#comments{margin-top:64px;}
+.g-emoji{font-size:24px;}
+@media (max-width: 600px) {
+    body {padding: 8px;}
+    .postTitle{font-size:24px;}
+}
+
+</style>
+
+
+
+
+<body>
+    <div id="header">
+<h1 class="postTitle">《Breaking Optimized HQC》粗读：从编译器优化引入的侧信道泄露到完整私钥恢复</h1>
+<div class="title-right">
+    <a href="https://starry-juniper.github.io" id="buttonHome" class="btn btn-invisible circle" title="首页">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathHome" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+    <a href="https://github.com/starry-juniper/starry-juniper.github.io/issues/6" target="_blank" class="btn btn-invisible circle" title="Issue">
+        <svg class="octicon" width="16" height="16">
+            <path id="pathIssue" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    
+
+    <a class="btn btn-invisible circle" onclick="modeSwitch();" title="切换主题">
+        <svg class="octicon" width="16" height="16" >
+            <path id="themeSwitch" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+
+</div>
+</div>
+    <div id="content">
+<div class="markdown-body" id="postBody"><blockquote>
+<p><strong>论文</strong>：<em>Breaking Optimized HQC: The First Cache-Timing Full Decryption Oracle Key-Recovery Attack in Post-quantum Cryptography</em><br>
+<strong>作者</strong>：Haiyue Dong, Qian Guo<br>
+<strong>发表</strong>：CRYPTO 2026（LNCS 16803，pp. 224–255）<br>
+<strong>标签</strong>：<code class="notranslate">PQC</code> <code class="notranslate">HQC</code> <code class="notranslate">Side-Channel Attack</code> <code class="notranslate">Cache Timing</code> <code class="notranslate">Soft-ISD</code> <code class="notranslate">论文粗读</code></p>
+</blockquote>
+<blockquote>
+<p><strong>阅读定位</strong>：本文是科研型粗读笔记，着重整理研究问题、攻击链条、实验结果、适用条件与后续研究启发；不涉及完整的汇编分析或 Soft-ISD 实现复现。</p>
+</blockquote>
+<h2>1. 研究背景：算法安全不等于实现安全</h2>
+<p>HQC（Hamming Quasi-Cyclic）是一种<strong>基于编码的后量子密钥封装机制（KEM）</strong>，已被 NIST 选中进行标准化。其数学安全性依赖于准循环编码相关的困难译码问题，但即便数学假设可靠，程序实现仍可能通过执行时间、功耗、缓存访问等侧信道泄露秘密信息。</p>
+<p>密码实现通常采用 <strong>constant-time（常数时间）编程</strong>：避免让秘密数据影响分支控制流或可观察的内存访问。这里的“常数时间”并非每次实际运行耗时必须完全一致。</p>
+<p>本文的研究问题是：即使 HQC 的 C 源代码采用了避免秘密相关分支的写法，编译器优化后的二进制程序是否仍然安全？如果不安全，能否通过缓存时间侧信道获得足够的信息，并最终恢复完整私钥？</p>
+<p>此前已有 HQC 的 PC（Plaintext Checking）Oracle 和 FD（Full Decryption）Oracle 侧信道研究，但本文重点推进的是：<strong>在微架构缓存时间侧信道中实现 FD-style Oracle，并完成端到端密钥恢复</strong>。</p>
+<h2>2. 必要背景：HQC 解码与侧信道预言机</h2>
+<h3>2.1 HQC 的基本结构</h3>
+<p>HQC 的底层公钥加密方案中，私钥包含低汉明重量向量 $x,y$，公钥包含 $h,s$，且满足：</p>
+<p>$$
+s=x+h\cdot y.
+$$</p>
+<p>解密时会计算：</p>
+<p>$$
+V=v-u\cdot y=mG+(x\cdot r_2-r_1\cdot y+e).
+$$</p>
+<p>这里可以把 $V$ 看作“编码后的消息 + 错误”，解码器需要纠正错误、恢复消息。上述运算位于特征为 $2$ 的代数结构中，加减均可理解为相应的异或操作。</p>
+<p>HQC 使用两层纠错码：</p>
+<ul>
+<li><strong>内层 Reed-Muller（RM）码</strong>：将接收数据分成多个块，分别解码。</li>
+<li><strong>外层 Reed-Solomon（RS）码</strong>：进一步修正内层解码后的错误。</li>
+</ul>
+<p>在 <strong>hqc-1</strong> 参数集中，共有 <strong>46 个 RM 解码块</strong>。本文重点关注内层解码的 <code class="notranslate">find_peaks</code> 过程，该过程产生秘密相关的中间解码字节。</p>
+<h3>2.2 PC、FD 与 FD-style Oracle</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>类型</th>
+<th>攻击者可观察的信息</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC Oracle</td>
+<td>密文是否解密为某个目标明文的判断</td>
+</tr>
+<tr>
+<td>FD Oracle</td>
+<td>多个 RM 块各自的完整中间解码结果</td>
+</tr>
+<tr>
+<td>本文 FD-style Oracle</td>
+<td>每个被观测 RM 块的解码结果是否属于特定集合的 <strong>1 位判断</strong></td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>因此，<strong>FD-style 并不意味着攻击者直接获得完整的 RM 解码字节，更不意味着直接读出私钥</strong>。</p>
+<h2>3. 核心漏洞：编译器重新引入秘密相关分支</h2>
+<h3>3.1 从掩码选择到条件跳转</h3>
+<p>HQC 的 AVX2 优化实现原本使用掩码运算完成选择，以避免显式的秘密相关分支。但是，作者发现，在所研究的编译配置中，<strong>Clang 14/15 的优化可能将这种掩码逻辑改写为 <code class="notranslate">cmp</code>、<code class="notranslate">je/jne</code> 等条件分支</strong>。</p>
+<p>这使得程序执行路径受到 RM 解码结果影响，继而产生可被观察的缓存访问差异。</p>
+<blockquote>
+<p>关键认识：<strong>源代码保持常数时间设计意图，不代表最终二进制一定满足常数时间要求。</strong></p>
+</blockquote>
+<h3>3.2 Flush+Reload：从缓存访问推测解码结果</h3>
+<p>Flush+Reload 大体分为三个环节：</p>
+<ol>
+<li><strong>Flush</strong>：驱逐指定缓存行。</li>
+<li><strong>Wait</strong>：等待目标程序执行。</li>
+<li><strong>Reload</strong>：重新读取并测量访问延迟，以推测目标是否访问过该缓存行。</li>
+</ol>
+<p>作者在特定编译结果中找到一个缓存行，其访问与 RM 解码字节 $\hat m$ 的低 4 位有关：</p>
+<p>$$
+\hat m\bmod 16\in{3,4,5,6}.
+$$</p>
+<p>据此定义命中集合：</p>
+<p>$$
+H={z\in\mathbb F_2^8:z\bmod16\in{3,4,5,6}}.
+$$</p>
+<p>理想无噪声情况下，针对第 $i$ 个 RM 块，可以得到：</p>
+<p>$$
+o_i=\mathbf1[\hat m_i\in H].
+$$</p>
+<p>例如， $37\bmod16=5$，因此属于命中集合； $40\bmod16=8$，因此不属于。<strong>攻击者得到的是集合成员判断，而不是数值 $37$ 或 $40$ 本身。</strong></p>
+<p>上述缓存行地址和分支布局针对论文所测的二进制构建，不能无条件推广到其他版本。</p>
+<h3>3.3 离线模板：从一次判断到密钥比特的概率</h3>
+<p>一次 Hit/Miss 仍不足以直接确定密钥。作者先在离线阶段模拟秘密块分布和 RM 解码，构造模板，以估计：</p>
+<p>$$
+\Pr(x_j=1\mid o_i),\qquad \Pr(y_j=1\mid o_i).
+$$</p>
+<p>随后在真实攻击中，使用多种精心选择的错误模式反复查询，累积每个秘密比特的<strong>可靠性信息（soft information）</strong>。</p>
+<p>整条链条是：</p>
+<p><strong>编译器漏洞 → 秘密相关缓存访问 → Flush+Reload → FD-style Oracle → 离线模板 → 密钥比特可靠性信息。</strong></p>
+<h2>4. 技术难点：RM 解码太快，如何区分各块信号？</h2>
+<p>论文测得单个 RM 块解码平均约 <strong>483 个 CPU 时钟周期</strong>，而可靠的 Flush+Reload 观测需要较长的采样间隔。连续监测时，相邻块的信号容易混淆。</p>
+<p>作者通过<strong>构造特殊密文中的错误模式</strong>，让指定 RM 块产生可识别的目标信号，并提出两种方法。</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>比较项</th>
+<th>Method 1</th>
+<th>Method 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>单个密文针对的块数</td>
+<td>1 个</td>
+<td>3 个、彼此间隔</td>
+</tr>
+<tr>
+<td>Oracle 判定</td>
+<td>重复测量，Hit 占比严格超过 80%</td>
+<td>时间对齐后多数投票</td>
+</tr>
+<tr>
+<td>块覆盖范围（hqc-1）</td>
+<td>可遍历全部 46 块</td>
+<td>直接观测第 7–45 块，共 39 块</td>
+</tr>
+<tr>
+<td>典型轨迹数</td>
+<td>23,000</td>
+<td>8,580</td>
+</tr>
+<tr>
+<td>典型在线采集时间</td>
+<td>约 4 秒</td>
+<td>约 3 秒</td>
+</tr>
+<tr>
+<td>主要权衡</td>
+<td>信号归属明确，但采集成本较高</td>
+<td>采集高效，但更依赖轨迹对齐</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>Method 2 使用第 0 块作为<strong>同步标记</strong>，第 1–6 块作为间隔区。由于前 7 块不产生直接的密钥可靠性观测，作者为对应密钥位置赋予先验概率 $p=\omega/n$。</p>
+<p>这里需要特别区分：<strong>不能直接观测某些 RM 块 ≠ 只能恢复一部分私钥</strong>；Soft-ISD 仍对完整秘密向量执行搜索。</p>
+<h2>5. Soft-ISD：把概率信息变成完整密钥</h2>
+<h3>5.1 为什么不能直接按概率逐位猜测？</h3>
+<p>离线模板提供的只是每个秘密比特取值的倾向，不是确定答案。作者还需要利用公开的代数约束和秘密向量低汉明重量的条件，寻找真正合法的密钥。</p>
+<p>把秘密向量拼接后，公钥关系可以写成：</p>
+<p>$$
+\begin{bmatrix}
+I_n &amp; \mathrm{cir}(h)
+\end{bmatrix}
+\begin{bmatrix}
+x\\
+y
+\end{bmatrix}
+=s
+$$</p>
+<p>Soft-ISD（软信息集译码）正是<strong>将概率信息用于指导信息集选择与候选搜索</strong>，再根据公钥方程和汉明重量限制验证候选。</p>
+<p>论文以对数似然比（LLR）表示可靠性：</p>
+<p>$$
+L_j=\log\frac{\Pr(e_j=0)}{\Pr(e_j=1)}.
+$$</p>
+<p>$L_j$ 越大，表示该位置越可能为 $0$；它并不等价于秘密比特的确定值。</p>
+<h3>5.2 GPU 加速做了什么？</h3>
+<p>作者设计 <strong>Two-List Meet-in-the-Middle（双列表中间相遇）</strong> 搜索：CPU 进行信息集选择、矩阵处理和候选验证，GPU 对两侧候选列表进行大规模匹配。</p>
+<p>实现上的主要优化包括：</p>
+<ul>
+<li>使用 <strong>M4RI</strong> 与预处理，减少重复矩阵消元成本；</li>
+<li>多轮划分和搜索，复用昂贵的线性代数计算；</li>
+<li>利用 <strong>Apple Silicon Unified Memory</strong>，降低 CPU–GPU 大列表传输开销；</li>
+<li>提高并行搜索吞吐量，而非无限增大候选列表。</li>
+</ul>
+<p>在论文使用的 <strong>M3 Ultra、512 GB 统一内存</strong>平台上，优化配置达到约 <strong>2.3–2.5 次解码尝试/秒</strong>，使用约 <strong>200 GB 统一内存</strong>。这说明其后处理仍有相当高的硬件资源需求。</p>
+<h2>6. 实验结果：理想 Oracle 与真实攻击必须分开看</h2>
+<h3>6.1 信息可靠性是否改善？</h3>
+<p>论文 Fig. 6 将密钥位置按“更可能为 0”排序，统计排序后前一部分实际出现的 $1$ 的数量。<strong>这个汉明重量越低，说明排序越有利于后续搜索</strong>。</p>
+<ul>
+<li>Method 1：错误模式数 $\tau$ 从 4 增加到 7 时，平均汉明重量由 <strong>8.2 降到 3.3</strong>。</li>
+<li>Method 2： $\tau$ 从 20 增加到 35 时，平均汉明重量由 <strong>7.4 降到 4.8</strong>。</li>
+</ul>
+<p>但两种方法均存在难处理的异常样本，尤其可能来自轨迹对齐错误。</p>
+<h3>6.2 理想 PC Oracle：测试 Soft-ISD 的算法效率</h3>
+<p>该实验使用<strong>无噪声的理想 PC Oracle</strong>，测试 20 组密钥，并将后处理时间限制为 30 分钟：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th align="right">Oracle 查询数</th>
+<th align="right">成功恢复</th>
+<th align="right">成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="right">276</td>
+<td align="right">11/20</td>
+<td align="right">55%</td>
+</tr>
+<tr>
+<td align="right">368</td>
+<td align="right">15/20</td>
+<td align="right">75%</td>
+</tr>
+<tr>
+<td align="right">460</td>
+<td align="right">20/20</td>
+<td align="right">100%</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p><strong>这些数字不是实际 Flush+Reload 攻击的成功率。</strong></p>
+<h3>6.3 真实缓存攻击：端到端恢复私钥</h3>
+<p>作者用真实缓存测量生成的可靠性信息，驱动 GPU Soft-ISD，并对 <strong>30 组随机密钥</strong>评估。Fig. 7 给出例如：</p>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>方法</th>
+<th align="right">轨迹数</th>
+<th align="right">完整密钥恢复成功率</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Method 1</td>
+<td align="right">23,000</td>
+<td align="right">90.0%</td>
+</tr>
+<tr>
+<td>Method 1</td>
+<td align="right">27,600</td>
+<td align="right">96.7%</td>
+</tr>
+<tr>
+<td>Method 2</td>
+<td align="right">8,580</td>
+<td align="right">86.7%</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p>这些结果对应论文设置的约 <strong>27 分钟计算超时</strong>。论文总体展示了<strong>少于 10 秒的在线轨迹采集、少于 30 分钟的离线后处理</strong>下的实际恢复能力。</p>
+<p>需要准确理解两件事：</p>
+<ol>
+<li><strong>恢复完整性</strong>：对于成功的测试样本，攻击恢复的是完整私钥，而不只是部分比特。</li>
+<li><strong>成功概率</strong>：不是每一组密钥都能恢复；噪声与时间对齐错误会影响可靠性估计，并增加后续搜索难度。</li>
+</ol>
+<p>此外，真实侧信道测量主要使用 Intel CPU 平台，GPU 后处理则使用高内存容量的 Apple Silicon 工作站；这两者不是同一台机器上的单一资源配置。</p>
+<h2>7. 局限性与防御措施</h2>
+<h3>7.1 论文成果的适用边界</h3>
+<ul>
+<li><strong>编译配置依赖</strong>：论文重点验证了特定 HQC AVX2 实现及 Clang 14/15 优化配置。Clang 16–18 虽消除了文中具体的低 4 位泄露路径，但作者仍观察到其他秘密相关控制流；不能据此断言所有编译版本都已完成相同端到端攻击。</li>
+<li><strong>观测分辨率有限</strong>：RM 块执行速度过快，不能轻易逐块精确观测。</li>
+<li><strong>真实噪声</strong>：缓存波动、执行时间抖动和轨迹错位可能导致失败。</li>
+<li><strong>攻击环境假设</strong>：文中的 Flush+Reload 依赖同机共享 LLC、可监测的共享代码页及可触发的目标解封装，并非对任意远程 HQC 服务都适用。</li>
+<li><strong>后处理成本</strong>：高性能 Soft-ISD 使用了大量统一内存与 GPU 计算资源。</li>
+</ul>
+<h3>7.2 防御措施</h3>
+<markdown-accessiblity-table><table role="table">
+<thead>
+<tr>
+<th>措施</th>
+<th>能缓解什么</th>
+<th>为什么还不够</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>静态链接</td>
+<td>减少 Flush+Reload 依赖的共享代码页条件</td>
+<td><strong>不能消除秘密相关分支</strong>，仍可能存在其他侧信道</td>
+</tr>
+<tr>
+<td>编译器屏障、<code class="notranslate">volatile</code>、<code class="notranslate">optnone</code> 等</td>
+<td>在测试工具链中阻止特定危险优化</td>
+<td>可能受版本与性能影响，不是跨平台保证</td>
+</tr>
+<tr>
+<td>经过审计的汇编实现</td>
+<td>更直接控制敏感的执行路径</td>
+<td>必须针对目标指令集和微架构审计</td>
+</tr>
+<tr>
+<td>二进制级检查与常数时间测试</td>
+<td>发现源代码与最终机器代码之间的安全差异</td>
+<td>需要持续覆盖构建配置和平台</td>
+</tr>
+</tbody>
+</table></markdown-accessiblity-table>
+<p><strong>防御重点不是消除所有分支，而是避免秘密相关的分支及可观察内存访问。</strong></p>
+<h2>8. 个人研究思考</h2>
+<p>我认为这篇论文最重要的启发是：<strong>密码算法的安全证明、源码层面的安全写法以及编译后二进制程序的安全性，是三个需要分别检查的层次。</strong></p>
+<p>一个值得继续探索的方向是：<strong>面向 PQC 实现的跨编译器、跨优化等级的秘密相关分支自动检测</strong>。</p>
+<ul>
+<li><strong>研究问题</strong>：能否自动比较敏感源码及不同编译配置下的二进制，识别由优化引入的秘密相关控制流或内存访问？</li>
+<li><strong>研究价值</strong>：在部署前发现常数时间性质的回归，减少对人工逐条审计汇编的依赖。</li>
+<li><strong>潜在难点</strong>：不同架构、编译器版本与优化策略产生不同指令序列；还需要处理误报、漏报及性能开销。</li>
+<li><strong>边界</strong>：这只能改善某类实现安全性，不能保证 PQC 方案的全部安全性。</li>
+</ul>
+<p>这一方向属于<strong>基于论文提出的研究设想</strong>，不是原论文已完成的成果。就后续精读而言，我更想关注 §4 的编译器漏洞发现过程和 §7 的防御讨论；Soft-ISD 的复杂实现可根据未来课题需求再深入。</p>
+<h2>9. 一分钟回顾</h2>
+<p>本文研究了 <strong>HQC 优化实现中的编译器诱导侧信道漏洞</strong>。虽然 C 源代码使用了常数时间掩码逻辑，但特定 Clang 优化会引入秘密相关分支。攻击者借助 <strong>Flush+Reload</strong> 从缓存访问中获得 RM 解码字节的部分信息，经 <strong>FD-style Oracle 与离线模板</strong>转换为秘密比特可靠性，再用 <strong>GPU 加速 Soft-ISD</strong> 搜索并验证完整私钥。论文在真实硬件上证明了这种攻击链的可行性，但其效果受到编译配置、攻击环境、测量噪声和后处理计算资源的限制。</p>
+<h2>参考资料</h2>
+<ol>
+<li>Dong, H., Guo, Q. <em>Breaking Optimized HQC: The First Cache-Timing Full Decryption Oracle Key-Recovery Attack in Post-quantum Cryptography</em>. CRYPTO 2026. <a href="https://doi.org/10.1007/978-3-032-35398-6_8" rel="nofollow">DOI</a></li>
+<li>作者提供的 <a href="https://eprint.iacr.org/2026/693" rel="nofollow">IACR ePrint 完整版（2026/693）</a></li>
+<li>作者提供的 <a href="https://github.com/ot-pca/cache-timing">实验代码仓库</a></li>
+</ol>
+<hr>
+<p><em>记录方式：科研型粗读。重点是建立“研究问题—攻击方法—实验结论—局限与启发”的知识框架；具体汇编路径和 Soft-ISD 搜索细节留待精读。</em></p></div>
+<div style="font-size:small;margin-top:8px;float:right;"></div>
+
+<button class="btn btn-block" type="button" onclick="openComments()" id="cmButton">评论</button>
+<div class="comments" id="comments"></div>
+
+</div>
+    <div id="footer"><div id="footer1">Copyright © <span id="copyrightYear"></span> <a href="https://starry-juniper.github.io">Starry Juniper | Research Notes</a></div>
+<div id="footer2">
+    <span id="runday"></span><span>Powered by <a href="https://meekdai.com/Gmeek.html" target="_blank">Gmeek</a></span>
+</div>
+
+<script>
+var now=new Date();
+document.getElementById("copyrightYear").innerHTML=now.getFullYear();
+
+if(""!=""){
+    var startSite=new Date("");
+    var diff=now.getTime()-startSite.getTime();
+    var diffDay=Math.floor(diff/(1000*60*60*24));
+    document.getElementById("runday").innerHTML="网站运行 "+diffDay+" 天"+" • ";
+}
+</script></div>
+</body>
+<script>
+var IconList={'sun': 'M8 10.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM8 12a4 4 0 100-8 4 4 0 000 8zM8 0a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0V.75A.75.75 0 018 0zm0 13a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 018 13zM2.343 2.343a.75.75 0 011.061 0l1.06 1.061a.75.75 0 01-1.06 1.06l-1.06-1.06a.75.75 0 010-1.06zm9.193 9.193a.75.75 0 011.06 0l1.061 1.06a.75.75 0 01-1.06 1.061l-1.061-1.06a.75.75 0 010-1.061zM16 8a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0116 8zM3 8a.75.75 0 01-.75.75H.75a.75.75 0 010-1.5h1.5A.75.75 0 013 8zm10.657-5.657a.75.75 0 010 1.061l-1.061 1.06a.75.75 0 11-1.06-1.06l1.06-1.06a.75.75 0 011.06 0zm-9.193 9.193a.75.75 0 010 1.06l-1.06 1.061a.75.75 0 11-1.061-1.06l1.06-1.061a.75.75 0 011.061 0z', 'moon': 'M9.598 1.591a.75.75 0 01.785-.175 7 7 0 11-8.967 8.967.75.75 0 01.961-.96 5.5 5.5 0 007.046-7.046.75.75 0 01.175-.786zm1.616 1.945a7 7 0 01-7.678 7.678 5.5 5.5 0 107.678-7.678z', 'sync': 'M1.705 8.005a.75.75 0 0 1 .834.656 5.5 5.5 0 0 0 9.592 2.97l-1.204-1.204a.25.25 0 0 1 .177-.427h3.646a.25.25 0 0 1 .25.25v3.646a.25.25 0 0 1-.427.177l-1.38-1.38A7.002 7.002 0 0 1 1.05 8.84a.75.75 0 0 1 .656-.834ZM8 2.5a5.487 5.487 0 0 0-4.131 1.869l1.204 1.204A.25.25 0 0 1 4.896 6H1.25A.25.25 0 0 1 1 5.75V2.104a.25.25 0 0 1 .427-.177l1.38 1.38A7.002 7.002 0 0 1 14.95 7.16a.75.75 0 0 1-1.49.178A5.5 5.5 0 0 0 8 2.5Z', 'home': 'M6.906.664a1.749 1.749 0 0 1 2.187 0l5.25 4.2c.415.332.657.835.657 1.367v7.019A1.75 1.75 0 0 1 13.25 15h-3.5a.75.75 0 0 1-.75-.75V9H7v5.25a.75.75 0 0 1-.75.75h-3.5A1.75 1.75 0 0 1 1 13.25V6.23c0-.531.242-1.034.657-1.366l5.25-4.2Zm1.25 1.171a.25.25 0 0 0-.312 0l-5.25 4.2a.25.25 0 0 0-.094.196v7.019c0 .138.112.25.25.25H5.5V8.25a.75.75 0 0 1 .75-.75h3.5a.75.75 0 0 1 .75.75v5.25h2.75a.25.25 0 0 0 .25-.25V6.23a.25.25 0 0 0-.094-.195Z', 'github': 'M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z'};
+var utterancesLoad=0;
+
+let themeSettings={
+    "dark": ["dark","moon","#00f0ff","dark-blue"],
+    "light": ["light","sun","#ff5000","github-light"],
+    "auto": ["auto","sync","","preferred-color-scheme"]
+};
+function changeTheme(mode, icon, color, utheme){
+    document.documentElement.setAttribute("data-color-mode",mode);
+    document.getElementById("themeSwitch").setAttribute("d",value=IconList[icon]);
+    document.getElementById("themeSwitch").parentNode.style.color=color;
+    if(utterancesLoad==1){utterancesTheme(utheme);}
+}
+function modeSwitch(){
+    let currentMode=document.documentElement.getAttribute('data-color-mode');
+    let newMode = currentMode === "light" ? "dark" : currentMode === "dark" ? "auto" : "light";
+    localStorage.setItem("meek_theme", newMode);
+    if(themeSettings[newMode]){
+        changeTheme(...themeSettings[newMode]);
+    }
+}
+function utterancesTheme(theme){
+    const message={type:'set-theme',theme: theme};
+    const iframe=document.getElementsByClassName('utterances-frame')[0];
+    iframe.contentWindow.postMessage(message,'https://utteranc.es');
+}
+if(themeSettings[theme]){changeTheme(...themeSettings[theme]);}
+console.log("\n %c Gmeek last https://github.com/Meekdai/Gmeek \n","padding:5px 0;background:#02d81d;color:#fff");
+</script>
+
+<script>
+document.getElementById("pathHome").setAttribute("d",IconList["home"]);
+document.getElementById("pathIssue").setAttribute("d",IconList["github"]);
+
+
+
+function openComments(){
+    cm=document.getElementById("comments");
+    cmButton=document.getElementById("cmButton");
+    cmButton.disabled=true;
+    cmButton.innerHTML="loading";
+    span=document.createElement("span");
+    span.setAttribute("class","AnimatedEllipsis");
+    cmButton.appendChild(span);
+
+    script=document.createElement("script");
+    script.setAttribute("src","https://utteranc.es/client.js");
+    script.setAttribute("repo","starry-juniper/starry-juniper.github.io");
+    script.setAttribute("issue-term","title");
+    
+    if(localStorage.getItem("meek_theme")=="dark"){script.setAttribute("theme","dark-blue");}
+    else if(localStorage.getItem("meek_theme")=="light") {script.setAttribute("theme","github-light");}
+    else{script.setAttribute("theme","preferred-color-scheme");}
+    
+    script.setAttribute("crossorigin","anonymous");
+    script.setAttribute("async","");
+    cm.appendChild(script);
+
+    int=self.setInterval("iFrameLoading()",200);
+}
+
+function iFrameLoading(){
+    var utterances=document.getElementsByClassName('utterances');
+    if(utterances.length==1){
+        if(utterances[0].style.height!=""){
+            utterancesLoad=1;
+            int=window.clearInterval(int);
+            document.getElementById("cmButton").style.display="none";
+            console.log("utterances Load OK");
+        }
+    }
+}
+
+
+
+</script>
+<script>MathJax = {tex: {inlineMath: [["$", "$"]]}};</script><script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+</html>
